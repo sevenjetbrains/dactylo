@@ -1,0 +1,22 @@
+[package]
+name = "dactylo-core"
+description = "Cœur métier de Dactylo : Rust pur, sans dépendance à Tauri."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+# Dérive specta::Type sur les types exposés à l'interface (activé par src-tauri).
+specta = ["dep:specta"]
+
+[dependencies]
+serde.workspace = true
+specta = { workspace = true, optional = true }
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true

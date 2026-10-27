@@ -1,0 +1,9 @@
+dist
+coverage
+target
+pnpm-lock.yaml
+src-tauri/gen
+src/shared/api/bindings.ts
+playwright-report
+test-results
+docs/cahier-des-charges.md

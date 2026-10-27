@@ -1,0 +1,10 @@
+{
+  "appName": "Dactylo",
+  "loading": "Chargement…",
+  "nav": {
+    "main": "Navigation principale"
+  },
+  "error": {
+    "generic": "Une erreur est survenue : {{message}}"
+  }
+}

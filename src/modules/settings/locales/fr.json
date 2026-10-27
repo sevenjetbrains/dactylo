@@ -1,0 +1,13 @@
+{
+  "menu": "Réglages",
+  "title": "Réglages",
+  "appearance": {
+    "title": "Apparence",
+    "theme": "Thème",
+    "themes": {
+      "light": "Clair",
+      "dark": "Sombre",
+      "system": "Selon le système"
+    }
+  }
+}

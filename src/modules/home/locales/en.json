@@ -1,0 +1,7 @@
+{
+  "menu": "Home",
+  "welcome": "Welcome",
+  "welcomeName": "Welcome, {{name}}",
+  "emptyTitle": "Nothing to do yet",
+  "emptyBody": "Typing exercises, the library and reviews will show up here."
+}

@@ -1,0 +1,10 @@
+{
+  "appName": "Dactylo",
+  "loading": "Loading…",
+  "nav": {
+    "main": "Main navigation"
+  },
+  "error": {
+    "generic": "Something went wrong: {{message}}"
+  }
+}

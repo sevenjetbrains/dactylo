@@ -1,0 +1,7 @@
+{
+  "menu": "Accueil",
+  "welcome": "Bienvenue",
+  "welcomeName": "Bienvenue, {{name}}",
+  "emptyTitle": "Rien à faire pour l'instant",
+  "emptyBody": "Les exercices de frappe, la bibliothèque et les révisions apparaîtront ici."
+}
