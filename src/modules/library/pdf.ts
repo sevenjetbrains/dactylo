@@ -66,7 +66,15 @@ export interface PdfDocument {
 /** Ouvre un PDF à partir de son contenu ; rejette si le fichier n'est pas un PDF lisible. */
 export async function openPdf(data: ArrayBuffer): Promise<PdfDocument> {
   // La tâche de chargement garde le worker ; c'est elle qu'on détruit à la fermeture.
-  const task = getDocument({ data: new Uint8Array(data) });
+  // Ressources annexes servies par l'application (plugin `pdfjsAssets` de vite.config.ts).
+  const assets = `${import.meta.env.BASE_URL}pdfjs`;
+  const task = getDocument({
+    data: new Uint8Array(data),
+    standardFontDataUrl: `${assets}/standard_fonts/`,
+    cMapUrl: `${assets}/cmaps/`,
+    cMapPacked: true,
+    wasmUrl: `${assets}/wasm/`,
+  });
   const doc = await task.promise;
   return {
     pageCount: doc.numPages,
