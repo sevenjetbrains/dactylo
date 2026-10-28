@@ -92,6 +92,7 @@ describe('miroir TS de TypingSession', () => {
     expect(live.wpm).toBe(32);
     expect(live.accuracy).toBe(90);
     expect(live.progress).toBe(0.25);
+    expect(live.errors).toBe(10);
     expect(liveStats(counters, 15_000, { type: 'duration', minutes: 1 }, 0, 10).progress).toBe(
       0.25,
     );
@@ -101,6 +102,7 @@ describe('miroir TS de TypingSession', () => {
       wpm: 0,
       accuracy: 100,
       progress: 1,
+      errors: 0,
     });
   });
 

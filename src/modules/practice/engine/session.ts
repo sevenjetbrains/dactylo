@@ -208,6 +208,8 @@ export interface LiveStats {
   accuracy: number;
   /** De 0 à 1. */
   progress: number;
+  /** Frappes fausses, corrigées ou non. */
+  errors: number;
 }
 
 /** Affichage en direct (F-05) : MPM net et précision, mêmes formules que `stats::compute`. */
@@ -228,5 +230,5 @@ export function liveStats(
   const limit = goalDurationMs(goal);
   const progress =
     limit !== null ? Math.min(1, activeMs / limit) : endPosition > 0 ? position / endPosition : 1;
-  return { wpm, accuracy, progress };
+  return { wpm, accuracy, progress, errors: counters.inserts - counters.correctInserts };
 }

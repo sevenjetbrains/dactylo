@@ -1,19 +1,33 @@
 /** Page d'accueil. */
 
+import { ClipboardPaste, Keyboard } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
 import { commands, unwrap, type PendingSession, type Profile } from '@/shared/api';
-import { Card, CardTitle } from '@/shared/ui/card';
+import { cn } from '@/shared/lib/utils';
+import { buttonVariants } from '@/shared/ui/button-variants';
+import { Card, Eyebrow } from '@/shared/ui/card';
+import { ProgressBar } from '@/shared/ui/progress-bar';
 
-/** Lien présenté comme un bouton principal. */
-const linkClass =
-  'inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring';
+/** Date du jour en toutes lettres (« Mardi 27 octobre »), avec une majuscule initiale. */
+function today(language: string): string {
+  const text = new Intl.DateTimeFormat(language, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(new Date());
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
 
-/** Accueil : salutation, reprise d'une session interrompue et accès à l'entraînement. */
+/**
+ * Accueil : salutation, reprise d'une session interrompue et accès à la copie.
+ * Les cartes Révision et Dictée et les statistiques des maquettes arriveront
+ * avec leurs phases (3 et 4).
+ */
 export default function HomePage() {
-  const { t } = useTranslation('home');
+  const { t, i18n } = useTranslation('home');
   const [profile, setProfile] = useState<Profile | null>(null);
   const [pending, setPending] = useState<PendingSession | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,45 +49,73 @@ export default function HomePage() {
     };
   }, []);
 
+  // Avancement de la session interrompue, en pourcentage entier.
+  const progress = Math.round((pending?.progress ?? 0) * 100);
+
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      {/* Salutation générique tant que le profil n'est pas chargé. */}
-      <h1 className="text-2xl font-semibold">
-        {profile ? t('welcomeName', { name: profile.name }) : t('welcome')}
-      </h1>
+    <div className="mx-auto flex max-w-6xl flex-col gap-8">
+      {/* En-tête : date, salutation et raccourci vers l'ajout d'un texte. */}
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-muted-foreground">{today(i18n.language)}</p>
+          {/* Salutation générique tant que le profil n'est pas chargé. */}
+          <h1 className="text-4xl font-bold tracking-tight">
+            {profile ? t('greeting', { name: profile.name }) : t('greetingAnonymous')}
+          </h1>
+        </div>
+        <Link to="/library" className={buttonVariants({ variant: 'outline' })}>
+          <ClipboardPaste aria-hidden className="size-4" />
+          {t('pasteText')}
+        </Link>
+      </header>
+
       {error && (
         <p role="alert" className="text-destructive">
           {t('common:error.generic', { message: error })}
         </p>
       )}
-      {/* Carte de reprise, seulement s'il y a une session interrompue. */}
-      {pending && (
-        <Card>
-          <CardTitle>{t('resumeTitle')}</CardTitle>
-          <p className="mb-4 text-muted-foreground">
-            {t('resumeBody', {
-              title: pending.title,
-              progress: Math.round((pending.progress ?? 0) * 100),
-            })}
-          </p>
-          <Link to="/practice" className={linkClass}>
-            {t('resumeAction')}
-          </Link>
-        </Card>
-      )}
-      {/* Accès à l'entraînement et à la bibliothèque. */}
-      <Card>
-        <CardTitle>{t('startTitle')}</CardTitle>
-        <p className="mb-4 text-muted-foreground">{t('startBody')}</p>
-        <div className="flex flex-wrap gap-3">
-          <Link to="/practice" className={linkClass}>
-            {t('startPractice')}
-          </Link>
-          <Link to="/library" className="inline-flex h-9 items-center px-2 text-sm underline">
-            {t('openLibrary')}
-          </Link>
-        </div>
-      </Card>
+
+      {/* Cartes d'action ; la grille accueillera la révision et la dictée. */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {pending ? (
+          // Reprise d'une session interrompue : titre, avancement et bouton Continuer.
+          <Card className="flex flex-col gap-4">
+            <Eyebrow>
+              <Keyboard aria-hidden className="size-4" />
+              {t('resumeEyebrow')}
+            </Eyebrow>
+            <h2 className="text-xl font-bold">{pending.title}</h2>
+            <div className="mt-auto flex flex-col gap-2">
+              <p className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{t('progress')}</span>
+                <span className="font-semibold tabular-nums">{progress} %</span>
+              </p>
+              <ProgressBar value={pending.progress ?? 0} label={t('progress')} />
+            </div>
+            <Link to="/practice" className={cn(buttonVariants(), 'self-start')}>
+              {t('continue')}
+            </Link>
+          </Card>
+        ) : (
+          // Sinon : démarrer une copie, ou choisir un texte dans la bibliothèque.
+          <Card className="flex flex-col gap-4">
+            <Eyebrow>
+              <Keyboard aria-hidden className="size-4" />
+              {t('startEyebrow')}
+            </Eyebrow>
+            <h2 className="text-xl font-bold">{t('startTitle')}</h2>
+            <p className="text-muted-foreground">{t('startBody')}</p>
+            <div className="mt-auto flex flex-wrap items-center gap-3">
+              <Link to="/practice" className={buttonVariants()}>
+                {t('startPractice')}
+              </Link>
+              <Link to="/library" className="text-sm font-semibold text-primary underline">
+                {t('openLibrary')}
+              </Link>
+            </div>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

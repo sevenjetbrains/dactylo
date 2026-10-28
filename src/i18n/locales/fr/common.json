@@ -6,5 +6,9 @@
   },
   "error": {
     "generic": "Une erreur est survenue : {{message}}"
+  },
+  "languageName": "Français",
+  "profile": {
+    "details": "{{layout}} · {{language}}"
   }
 }

@@ -43,8 +43,8 @@ describe('registre de modules', () => {
     const menu = buildMenu([...modules, hello]);
     expect(menu.map((e) => e.moduleId)).toEqual([
       'home',
-      'library',
       'practice',
+      'library',
       'hello',
       'settings',
     ]);

@@ -10,7 +10,7 @@ import { Cell, splitGraphemes, type RawKey, type TypingEngine } from './engine/s
 import { FALLBACK_COLUMNS, firstVisibleLine, lineOf } from './layout';
 
 /** Hauteur de ligne, en multiple de la taille de police. */
-const LINE_HEIGHT = 1.6;
+const LINE_HEIGHT = 2;
 
 /** Propriétés de la zone de frappe. */
 interface Props {
@@ -37,13 +37,19 @@ function glyph(grapheme: string, cell: Cell): string {
   return grapheme;
 }
 
-/** Classes de chaque état : à taper, juste, corrigé (souligné ambre), faux (rouge). */
+/**
+ * Classes de chaque état : à taper (gris), juste (texte normal), corrigé (souligné ambre),
+ * faux (rouge sur fond rosé, souligné en vague, comme sur la maquette).
+ */
 const CELL_CLASS: Record<Cell, string> = {
   [Cell.Pending]: 'text-muted-foreground',
   [Cell.Correct]: 'text-foreground',
-  [Cell.Corrected]: 'text-foreground underline decoration-amber-500 decoration-2',
-  [Cell.Wrong]: 'bg-destructive/15 text-destructive',
+  [Cell.Corrected]: 'text-foreground underline decoration-accent decoration-2',
+  [Cell.Wrong]: 'rounded-sm bg-destructive/10 text-destructive underline decoration-wavy',
 };
+
+/** Curseur : le caractère à taper est surligné en bleu clair. */
+export const CURSOR_CLASS = 'rounded-sm bg-primary/15';
 
 /**
  * Zone de frappe (F-01 à F-03). La saisie passe par un champ masqué qui écoute
@@ -161,7 +167,13 @@ export function TypingArea({
 
   return (
     <div
-      className="relative cursor-text rounded-lg border border-border bg-card px-6 py-4"
+      // Cadre bleu épais et halo quand la zone a le focus ; cadre neutre en pause.
+      className={cn(
+        'relative cursor-text rounded-2xl border-2 bg-card px-10 py-7 transition-shadow',
+        disabled
+          ? 'border-border'
+          : 'border-primary focus-within:ring-4 focus-within:ring-primary/15',
+      )}
       onClick={() => inputRef.current?.focus()}
       data-version={version}
     >
@@ -198,7 +210,7 @@ export function TypingArea({
           if (start === undefined || start >= engine.text.length) {
             return <div key={line}>&nbsp;</div>;
           }
-          // Un élément par caractère de la ligne ; le curseur souligne la position courante.
+          // Un élément par caractère de la ligne ; le curseur surligne la position courante.
           const end = lineStarts[line + 1] ?? engine.text.length;
           const spans = [];
           for (let i = start; i < end; i++) {
@@ -210,7 +222,7 @@ export function TypingArea({
                 data-cell={cell}
                 className={cn(
                   CELL_CLASS[cell],
-                  i === position && 'border-b-2 border-primary',
+                  i === position && CURSOR_CLASS,
                   grapheme === '\n' && cell === Cell.Pending && 'opacity-50',
                 )}
               >

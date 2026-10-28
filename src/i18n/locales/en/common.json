@@ -6,5 +6,9 @@
   },
   "error": {
     "generic": "Something went wrong: {{message}}"
+  },
+  "languageName": "English",
+  "profile": {
+    "details": "{{layout}} · {{language}}"
   }
 }

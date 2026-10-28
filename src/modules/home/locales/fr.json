@@ -1,12 +1,14 @@
 {
   "menu": "Accueil",
-  "welcome": "Bienvenue",
-  "welcomeName": "Bienvenue, {{name}}",
-  "resumeTitle": "Reprendre la session",
-  "resumeBody": "Votre session sur « {{title}} » s'est arrêtée à {{progress}} %.",
-  "resumeAction": "Reprendre",
   "startTitle": "S'entraîner",
   "startBody": "Recopiez le dernier texte ajouté, ou choisissez-en un dans la bibliothèque.",
   "startPractice": "Commencer",
-  "openLibrary": "Ouvrir la bibliothèque"
+  "openLibrary": "Ouvrir la bibliothèque",
+  "greeting": "Bonjour {{name}}.",
+  "greetingAnonymous": "Bonjour.",
+  "pasteText": "Coller un texte",
+  "resumeEyebrow": "Reprendre la copie",
+  "progress": "Progression",
+  "continue": "Continuer",
+  "startEyebrow": "Copie"
 }

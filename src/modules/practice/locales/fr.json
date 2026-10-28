@@ -1,15 +1,15 @@
 {
-  "menu": "S'entraîner",
-  "title": "Entraînement",
-  "shortcuts": "Échap : pause · Ctrl+R : recommencer · Ctrl+Entrée : texte suivant",
+  "menu": "Copie",
+  "title": "Copie",
   "typingInput": "Zone de frappe",
   "paused": "En pause — appuyez sur Échap pour reprendre.",
   "saving": "Enregistrement de la session…",
   "banner": {
     "label": "Statistiques en direct",
     "wpm": "MPM",
-    "accuracy": "Précision",
-    "time": "Temps",
+    "accuracy": "% précision",
+    "time": "écoulé",
+    "errors": "erreurs",
     "progress": "Progression"
   },
   "empty": {
@@ -59,7 +59,10 @@
     "fontSize": "Taille du texte : {{size}} px",
     "visibleLines": "Lignes visibles",
     "activeLine": "Position de la ligne active",
-    "activeLines": { "top": "En haut", "center": "Au centre" },
+    "activeLines": {
+      "top": "En haut",
+      "center": "Au centre"
+    },
     "correction": "Correction des erreurs",
     "corrections": {
       "free": "Libre : on avance, l'erreur est comptée",
@@ -78,5 +81,31 @@
     "minutesValue_one": "{{count}} minute",
     "minutesValue_other": "{{count}} minutes",
     "wordCount": "Nombre de mots"
+  },
+  "shortcutHints": {
+    "pause": "pause",
+    "restart": "recommencer",
+    "next": "texte suivant"
+  },
+  "shortcutKeys": {
+    "pause": "Échap",
+    "restart": "Ctrl R",
+    "next": "Ctrl ↵"
+  },
+  "layoutInfo": "Lignes visibles : {{lines}} · police {{size}} px",
+  "toolbar": {
+    "goal": "Type de session",
+    "wholeText": "Texte entier",
+    "minutes": "{{count}} min",
+    "words_one": "{{count}} mot",
+    "words_other": "{{count}} mots",
+    "correction": "Correction",
+    "pause": "Mettre en pause",
+    "resume": "Reprendre la frappe",
+    "restart": "Recommencer le texte"
+  },
+  "corrections": {
+    "free": "Libre",
+    "blocking": "Bloquante"
   }
 }

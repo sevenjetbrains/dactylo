@@ -19,6 +19,8 @@ const api = {
   finishSession: vi.fn(),
   abandonSession: vi.fn(),
   nextTextId: vi.fn(),
+  getPracticeSettings: vi.fn(),
+  savePracticeSettings: vi.fn(),
 };
 
 // Toute commande appelée est redirigée vers l'espion du même nom.
@@ -123,6 +125,8 @@ describe('PracticePage', () => {
     api.finishSession.mockReturnValue(ok(summary));
     api.abandonSession.mockReturnValue(ok(null));
     api.nextTextId.mockReturnValue(ok('t2'));
+    api.getPracticeSettings.mockReturnValue(ok(settings));
+    api.savePracticeSettings.mockImplementation((s: unknown) => ok(s));
   });
 
   it('joue une session complète puis affiche le résumé (F-32)', async () => {
@@ -183,6 +187,44 @@ describe('PracticePage', () => {
     fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true });
     await waitFor(() => expect(api.startSession).toHaveBeenLastCalledWith('t2'));
     expect(api.nextTextId).toHaveBeenCalledWith('t1');
+  });
+
+  it('change le type de session depuis la barre d’outils et relance le texte (F-06)', async () => {
+    renderPage();
+    await screen.findByLabelText('Zone de frappe');
+    // L'onglet du type en cours est actif.
+    expect(screen.getByRole('button', { name: 'Texte entier' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await userEvent.click(screen.getByRole('button', { name: '2 min' }));
+    // Réglage enregistré à partir des réglages du profil, puis nouvelle session.
+    await waitFor(() =>
+      expect(api.savePracticeSettings).toHaveBeenCalledWith({
+        ...settings,
+        goal: { type: 'duration', minutes: 2 },
+      }),
+    );
+    await waitFor(() => expect(api.startSession).toHaveBeenCalledTimes(2));
+    expect(api.abandonSession).toHaveBeenCalledWith('s1');
+  });
+
+  it('change la correction et met en pause depuis la barre d’outils (F-04, F-07)', async () => {
+    renderPage();
+    await screen.findByLabelText('Zone de frappe');
+    // Le bouton pause met en pause, puis devient « Reprendre la frappe ».
+    await userEvent.click(screen.getByRole('button', { name: 'Mettre en pause' }));
+    expect(usePracticeStore.getState().status).toBe('paused');
+    await userEvent.click(screen.getByRole('button', { name: 'Reprendre la frappe' }));
+    expect(usePracticeStore.getState().status).toBe('typing');
+
+    await userEvent.selectOptions(screen.getByLabelText('Correction'), 'blocking');
+    await waitFor(() =>
+      expect(api.savePracticeSettings).toHaveBeenCalledWith({
+        ...settings,
+        correction: 'blocking',
+      }),
+    );
   });
 
   it('propose de reprendre une session interrompue et rejoue ses frappes (NF-06)', async () => {

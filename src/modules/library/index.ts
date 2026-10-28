@@ -12,6 +12,7 @@ import fr from './locales/fr.json';
 export const library: ModuleManifest = {
   id: 'library',
   route: { path: 'library', component: lazy(() => import('./LibraryPage')) },
-  menu: { labelKey: 'menu', icon: LibraryBig, order: 10 },
+  // Après Copie et la future Dictée (ordre des maquettes).
+  menu: { labelKey: 'menu', icon: LibraryBig, order: 30 },
   locales: { fr, en },
 };

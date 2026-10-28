@@ -1,12 +1,14 @@
 {
   "menu": "Home",
-  "welcome": "Welcome",
-  "welcomeName": "Welcome, {{name}}",
-  "resumeTitle": "Resume your session",
-  "resumeBody": "Your session on “{{title}}” stopped at {{progress}}%.",
-  "resumeAction": "Resume",
   "startTitle": "Practice",
   "startBody": "Copy the latest text you added, or pick one from the library.",
   "startPractice": "Start",
-  "openLibrary": "Open the library"
+  "openLibrary": "Open the library",
+  "greeting": "Hello {{name}}.",
+  "greetingAnonymous": "Hello.",
+  "pasteText": "Paste a text",
+  "resumeEyebrow": "Resume copying",
+  "progress": "Progress",
+  "continue": "Continue",
+  "startEyebrow": "Copy"
 }

@@ -8,11 +8,11 @@ export function formatNumber(value: number | null | undefined, language: string,
   }).format(value ?? 0);
 }
 
-/** « 1:05 » pour 65 s. */
-export function formatDuration(ms: number): string {
+/** « 1:05 » pour 65 s ; avec `padMinutes`, « 01:05 » (chronomètre du bandeau). */
+export function formatDuration(ms: number, padMinutes = false): string {
   // Secondes entières, puis découpage en minutes et secondes sur deux chiffres.
   const total = Math.floor(ms / 1000);
-  const minutes = Math.floor(total / 60);
+  const minutes = Math.floor(total / 60).toString();
   const seconds = total % 60;
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  return `${padMinutes ? minutes.padStart(2, '0') : minutes}:${seconds.toString().padStart(2, '0')}`;
 }

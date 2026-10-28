@@ -1,4 +1,4 @@
-/** Déclaration du module Copie (Entraînement) auprès du registre. */
+/** Déclaration du module Copie auprès du registre. */
 
 import { Keyboard } from 'lucide-react';
 import { lazy } from 'react';
@@ -12,7 +12,8 @@ import fr from './locales/fr.json';
 export const practice: ModuleManifest = {
   id: 'practice',
   route: { path: 'practice', component: lazy(() => import('./PracticePage')) },
-  menu: { labelKey: 'menu', icon: Keyboard, order: 20 },
+  // Juste après l'accueil, comme sur les maquettes.
+  menu: { labelKey: 'menu', icon: Keyboard, order: 10 },
   // Panneau de réglages chargé à la demande, à l'ouverture de la page Réglages.
   settingsPanel: {
     titleKey: 'settings.title',

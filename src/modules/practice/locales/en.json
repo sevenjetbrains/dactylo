@@ -1,15 +1,15 @@
 {
-  "menu": "Practice",
-  "title": "Practice",
-  "shortcuts": "Esc: pause · Ctrl+R: restart · Ctrl+Enter: next text",
+  "menu": "Copy",
+  "title": "Copy",
   "typingInput": "Typing area",
   "paused": "Paused — press Esc to resume.",
   "saving": "Saving the session…",
   "banner": {
     "label": "Live statistics",
     "wpm": "WPM",
-    "accuracy": "Accuracy",
-    "time": "Time",
+    "accuracy": "% accuracy",
+    "time": "elapsed",
+    "errors": "errors",
     "progress": "Progress"
   },
   "empty": {
@@ -59,7 +59,10 @@
     "fontSize": "Text size: {{size}} px",
     "visibleLines": "Visible lines",
     "activeLine": "Active line position",
-    "activeLines": { "top": "Top", "center": "Centre" },
+    "activeLines": {
+      "top": "Top",
+      "center": "Centre"
+    },
     "correction": "Error correction",
     "corrections": {
       "free": "Free: move on, the error is counted",
@@ -78,5 +81,31 @@
     "minutesValue_one": "{{count}} minute",
     "minutesValue_other": "{{count}} minutes",
     "wordCount": "Word count"
+  },
+  "shortcutHints": {
+    "pause": "pause",
+    "restart": "restart",
+    "next": "next text"
+  },
+  "shortcutKeys": {
+    "pause": "Esc",
+    "restart": "Ctrl R",
+    "next": "Ctrl ↵"
+  },
+  "layoutInfo": "Visible lines: {{lines}} · font {{size}} px",
+  "toolbar": {
+    "goal": "Session type",
+    "wholeText": "Whole text",
+    "minutes": "{{count}} min",
+    "words_one": "{{count}} word",
+    "words_other": "{{count}} words",
+    "correction": "Correction",
+    "pause": "Pause",
+    "resume": "Resume typing",
+    "restart": "Restart the text"
+  },
+  "corrections": {
+    "free": "Free",
+    "blocking": "Blocking"
   }
 }

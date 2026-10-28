@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { Cell, splitGraphemes, TypingEngine, type RawKey } from './engine/session';
 import { firstVisibleLine, lineOf } from './layout';
-import { TypingArea } from './TypingArea';
+import { CURSOR_CLASS, TypingArea } from './TypingArea';
 
 /** Réglages d'affichage des tests : 2 lignes visibles. */
 const settings = { fontSize: 20, visibleLines: 2, activeLine: 'top' as const };
@@ -120,7 +120,7 @@ describe('TypingArea — affichage', () => {
       Cell.Wrong,
       Cell.Pending,
     ]);
-    expect(cells[3]).toHaveClass('border-b-2');
+    expect(cells[3]).toHaveClass(CURSOR_CLASS);
   });
 
   it('ne rend que les lignes visibles (F-03, NF-01)', () => {

@@ -2,33 +2,54 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Jetons de couleur (convention shadcn/ui) ; contrastes visés : WCAG AA (NF-07). */
+/*
+ * Jetons de couleur (convention shadcn/ui), d'après les maquettes de docs/design ;
+ * contrastes visés : WCAG AA (NF-07).
+ */
 :root {
-  --background: oklch(0.99 0 0);
-  --foreground: oklch(0.2 0.02 260);
+  /* Fond gris bleuté, cartes blanches, texte bleu nuit. */
+  --background: oklch(0.975 0.005 265);
+  --foreground: oklch(0.23 0.05 272);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.02 260);
-  --muted: oklch(0.95 0.01 260);
-  --muted-foreground: oklch(0.45 0.02 260);
-  --primary: oklch(0.38 0.14 264);
-  --primary-foreground: oklch(0.98 0 0);
-  --destructive: oklch(0.5 0.2 27);
-  --border: oklch(0.9 0.01 260);
-  --ring: oklch(0.55 0.15 264);
+  --card-foreground: oklch(0.23 0.05 272);
+  --muted: oklch(0.95 0.008 265);
+  --muted-foreground: oklch(0.5 0.025 265);
+  /* Bleu vif des actions principales et de la zone de frappe. */
+  --primary: oklch(0.52 0.22 268);
+  --primary-foreground: oklch(0.99 0 0);
+  /* Ambre : révision, avatar du profil. */
+  --accent: oklch(0.8 0.15 75);
+  --accent-foreground: oklch(0.23 0.05 272);
+  --destructive: oklch(0.55 0.21 27);
+  --success: oklch(0.52 0.13 155);
+  --border: oklch(0.91 0.01 265);
+  --ring: oklch(0.52 0.22 268);
+  /* Barre latérale bleu nuit. */
+  --sidebar: oklch(0.22 0.06 272);
+  --sidebar-foreground: oklch(0.97 0.01 265);
+  --sidebar-muted: oklch(0.8 0.03 265);
+  --sidebar-accent: oklch(0.3 0.06 272);
 }
 
 .dark {
-  --background: oklch(0.17 0.02 260);
-  --foreground: oklch(0.95 0.01 260);
-  --card: oklch(0.21 0.02 260);
-  --card-foreground: oklch(0.95 0.01 260);
-  --muted: oklch(0.27 0.02 260);
-  --muted-foreground: oklch(0.72 0.02 260);
-  --primary: oklch(0.72 0.12 264);
-  --primary-foreground: oklch(0.17 0.02 260);
+  --background: oklch(0.17 0.03 272);
+  --foreground: oklch(0.95 0.01 265);
+  --card: oklch(0.21 0.035 272);
+  --card-foreground: oklch(0.95 0.01 265);
+  --muted: oklch(0.27 0.035 272);
+  --muted-foreground: oklch(0.72 0.025 265);
+  --primary: oklch(0.68 0.16 268);
+  --primary-foreground: oklch(0.15 0.03 272);
+  --accent: oklch(0.8 0.15 75);
+  --accent-foreground: oklch(0.2 0.04 272);
   --destructive: oklch(0.7 0.18 27);
-  --border: oklch(0.3 0.02 260);
-  --ring: oklch(0.72 0.12 264);
+  --success: oklch(0.75 0.13 155);
+  --border: oklch(0.3 0.035 272);
+  --ring: oklch(0.68 0.16 268);
+  --sidebar: oklch(0.14 0.03 272);
+  --sidebar-foreground: oklch(0.95 0.01 265);
+  --sidebar-muted: oklch(0.75 0.03 265);
+  --sidebar-accent: oklch(0.24 0.04 272);
 }
 
 @theme inline {
@@ -40,9 +61,19 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
   --color-border: var(--border);
   --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-accent: var(--sidebar-accent);
+  /* Polices installées avec Windows en priorité : pas de téléchargement (NF-03). */
+  --font-sans: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Cascadia Mono', 'JetBrains Mono', Consolas, ui-monospace, monospace;
 }
 
 html,
@@ -55,5 +86,5 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: system-ui, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
 }

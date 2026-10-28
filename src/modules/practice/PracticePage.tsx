@@ -9,15 +9,17 @@ import {
   unwrap,
   type ApiError,
   type PendingSession,
+  type PracticeSettings_Serialize as PracticeSettings,
   type SessionSummary_Serialize as Summary,
 } from '@/shared/api';
 import { Button } from '@/shared/ui/button';
-import { Card, CardTitle } from '@/shared/ui/card';
+import { Card, CardTitle, Eyebrow } from '@/shared/ui/card';
 
 import { goalEndPosition, liveStats, type RawKey } from './engine/session';
 import { formatNumber } from './format';
 import { LiveBanner } from './LiveBanner';
 import { SessionSummary } from './SessionSummary';
+import { SessionToolbar } from './SessionToolbar';
 import { activeMs, usePracticeStore } from './store';
 import { FALLBACK_COLUMNS } from './layout';
 import { TypingArea } from './TypingArea';
@@ -210,6 +212,36 @@ export default function PracticePage() {
     else await begin(target);
   }, [dropCurrent, begin, navigate, requested]);
 
+  /**
+   * Met en pause ou reprend (Échap, bouton pause) ; seulement pendant la frappe.
+   * Renvoie `false` si rien n'a changé. Les frappes partent au moment de la pause.
+   */
+  const togglePause = useCallback(() => {
+    const store = usePracticeStore.getState();
+    if (store.status !== 'typing' && store.status !== 'paused') return false;
+    store.togglePause(performance.now());
+    if (store.status === 'typing') void flush();
+    return true;
+  }, [flush]);
+
+  /**
+   * Change un réglage depuis la barre d'outils puis relance le texte : les réglages
+   * sont figés pour une session. On part des réglages enregistrés du profil, qui ont
+   * pu changer dans la page Réglages depuis le début de la session.
+   */
+  const changeSettings = useCallback(
+    async (patch: Partial<PracticeSettings>) => {
+      try {
+        const current = await unwrap(commands.getPracticeSettings());
+        await unwrap(commands.savePracticeSettings({ ...current, ...patch }));
+        await restart();
+      } catch (e) {
+        setPhase({ kind: 'error', message: messageOf(e) });
+      }
+    },
+    [restart],
+  );
+
   // Raccourcis (F-07) : Échap = pause, Ctrl+R = recommencer, Ctrl+Entrée = texte suivant.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -221,19 +253,13 @@ export default function PracticePage() {
       } else if (ctrl && e.key === 'Enter') {
         e.preventDefault();
         void next();
-      } else if (e.key === 'Escape') {
-        // Pause seulement pendant la frappe ; on envoie les frappes au moment de la pause.
-        const store = usePracticeStore.getState();
-        if (store.status === 'typing' || store.status === 'paused') {
-          e.preventDefault();
-          store.togglePause(performance.now());
-          if (store.status === 'typing') void flush();
-        }
+      } else if (e.key === 'Escape' && togglePause()) {
+        e.preventDefault();
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [restart, next, flush]);
+  }, [restart, next, togglePause]);
 
   /** Reprend la session interrompue proposée. */
   const resume = async (id: string) => {
@@ -256,15 +282,15 @@ export default function PracticePage() {
   };
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6">
-      {/* Titre du texte pendant la session, titre de la page sinon ; rappel des raccourcis. */}
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-semibold">
+    <div className="mx-auto flex max-w-6xl flex-col gap-5">
+      {/* Surtitre « Copie », puis titre du texte pendant la session (titre de la page sinon). */}
+      <header>
+        <Eyebrow>{t('title')}</Eyebrow>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">
           {phase.kind === 'session' || phase.kind === 'summary'
             ? (session?.title ?? t('title'))
             : t('title')}
         </h1>
-        <p className="text-xs text-muted-foreground">{t('shortcuts')}</p>
       </header>
 
       {phase.kind === 'loading' && <p>{t('common:loading')}</p>}
@@ -310,6 +336,15 @@ export default function PracticePage() {
       {/* Session en cours : bandeau, zone de frappe et état. */}
       {phase.kind === 'session' && session && engine && (
         <>
+          <SessionToolbar
+            settings={session.settings}
+            paused={status === 'paused'}
+            disabled={status === 'finishing'}
+            onGoal={(goal) => void changeSettings({ goal })}
+            onCorrection={(correction) => void changeSettings({ correction })}
+            onTogglePause={togglePause}
+            onRestart={() => void restart()}
+          />
           {session.settings.showBanner && (
             <LiveBanner
               stats={liveStats(
@@ -336,6 +371,25 @@ export default function PracticePage() {
           ) : (
             <p>{t('common:loading')}</p>
           )}
+          {/* Rappel des raccourcis (F-07) à gauche, mise en page à droite. */}
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
+            <ul className="flex flex-wrap gap-5">
+              {(['pause', 'restart', 'next'] as const).map((action) => (
+                <li key={action} className="flex items-center gap-2">
+                  <kbd className="rounded-md border border-border bg-card px-2 py-0.5 font-mono text-xs text-foreground shadow-xs">
+                    {t(`shortcutKeys.${action}`)}
+                  </kbd>
+                  {t(`shortcutHints.${action}`)}
+                </li>
+              ))}
+            </ul>
+            <p>
+              {t('layoutInfo', {
+                lines: session.settings.visibleLines,
+                size: session.settings.fontSize,
+              })}
+            </p>
+          </div>
           {status === 'paused' && (
             <p role="status" className="text-center font-medium">
               {t('paused')}

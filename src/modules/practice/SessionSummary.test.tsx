@@ -88,5 +88,7 @@ describe('SessionSummary (F-32)', () => {
     expect(formatDuration(0)).toBe('0:00');
     expect(formatDuration(9_999)).toBe('0:09');
     expect(formatDuration(600_000)).toBe('10:00');
+    // Version chronomètre, minutes sur deux chiffres.
+    expect(formatDuration(84_000, true)).toBe('01:24');
   });
 });
