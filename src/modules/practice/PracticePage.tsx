@@ -53,6 +53,9 @@ export default function PracticePage() {
   const [params] = useSearchParams();
   // Texte demandé par l'URL (`?text=<id>`), sinon le plus récent.
   const requested = params.get('text');
+  // Exercice demandé par l'URL (`&exercise=3`, à partir de 1), sinon le prochain à faire.
+  const exerciseParam = Number(params.get('exercise'));
+  const requestedExercise = exerciseParam >= 1 ? exerciseParam - 1 : null;
   const navigate = useNavigate();
 
   // État local : étape, largeur en colonnes, débuts de ligne, horloge du bandeau.
@@ -73,13 +76,16 @@ export default function PracticePage() {
   // Chaque requête reçoit un jeton : une réponse arrivée trop tard est ignorée.
   const request = useRef(0);
 
-  /** Démarre une nouvelle session sur le texte donné (ou le plus récent). */
-  const begin = useCallback(async (textId: string | null) => {
+  /**
+   * Démarre une nouvelle session sur le texte donné (ou le plus récent), sur
+   * l'exercice donné (à partir de 0) ou, à défaut, sur le prochain à faire (F-24).
+   */
+  const begin = useCallback(async (textId: string | null, exercise: number | null = null) => {
     const token = ++request.current;
     setPhase({ kind: 'loading' });
     setLineStarts(null);
     try {
-      const start = await unwrap(commands.startSession(textId));
+      const start = await unwrap(commands.startSession(textId, exercise));
       if (token !== request.current) return;
       usePracticeStore.getState().load(start);
       setPhase({ kind: 'session' });
@@ -102,7 +108,7 @@ export default function PracticePage() {
       .then((pending) => {
         if (token !== requests.current) return;
         if (pending) setPhase({ kind: 'offer', pending });
-        else void begin(requested);
+        else void begin(requested, requestedExercise);
       })
       .catch((e: unknown) => {
         if (token === requests.current) setPhase({ kind: 'error', message: messageOf(e) });
@@ -111,7 +117,7 @@ export default function PracticePage() {
     return () => {
       requests.current++;
     };
-  }, [requested, begin]);
+  }, [requested, requestedExercise, begin]);
 
   // En quittant la page, les frappes en attente sont envoyées ; la session reste reprenable.
   const flushRef = useRef(flush);
@@ -185,16 +191,27 @@ export default function PracticePage() {
       takeBatch();
       dropped = unwrap(commands.abandonSession(current.sessionId)).catch(() => undefined);
     }
-    return { textId: current.textId, token, dropped };
+    return { textId: current.textId, exercise: current.exercise.index, token, dropped };
   }, []);
 
-  /** Recommence le même texte (Ctrl+R) après abandon de la session en cours. */
+  /** Recommence le même exercice (Ctrl+R) après abandon de la session en cours. */
   const restart = useCallback(async () => {
     const current = dropCurrent();
     if (!current) return;
     await current.dropped;
-    if (current.token === request.current) await begin(current.textId);
+    if (current.token === request.current) await begin(current.textId, current.exercise);
   }, [dropCurrent, begin]);
+
+  /** Enchaîne sur l'exercice `index` du même texte, depuis l'écran de fin. */
+  const nextExercise = useCallback(
+    async (index: number) => {
+      const current = dropCurrent();
+      if (!current) return;
+      await current.dropped;
+      if (current.token === request.current) await begin(current.textId, index);
+    },
+    [dropCurrent, begin],
+  );
 
   /** Passe au texte suivant (Ctrl+Entrée) ; reste sur le même s'il est seul. */
   const next = useCallback(async () => {
@@ -278,14 +295,22 @@ export default function PracticePage() {
   /** Abandonne la session interrompue et en démarre une nouvelle. */
   const discard = async (id: string) => {
     await unwrap(commands.abandonSession(id)).catch(() => undefined);
-    await begin(requested);
+    await begin(requested, requestedExercise);
   };
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-5">
       {/* Surtitre « Copie », puis titre du texte pendant la session (titre de la page sinon). */}
       <header>
-        <Eyebrow>{t('title')}</Eyebrow>
+        <Eyebrow>
+          {/* « Copie · Exercice 3 sur 8 » pour un texte découpé en exercices. */}
+          {session && session.exercise.count > 1 && phase.kind !== 'offer'
+            ? `${t('title')} · ${t('exercise', {
+                current: session.exercise.index + 1,
+                count: session.exercise.count,
+              })}`
+            : t('title')}
+        </Eyebrow>
         <h1 className="mt-1 text-3xl font-bold tracking-tight">
           {phase.kind === 'session' || phase.kind === 'summary'
             ? (session?.title ?? t('title'))
@@ -409,6 +434,7 @@ export default function PracticePage() {
           summary={phase.summary}
           onRestart={() => void restart()}
           onNext={() => void next()}
+          onNextExercise={(index) => void nextExercise(index)}
         />
       )}
     </div>

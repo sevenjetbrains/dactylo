@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
 
 /** Colle un texte dans la bibliothèque et attend la confirmation. */
 async function pasteText(page: Page, title: string, content: string) {
-  await page.goto('/#/library');
+  await page.goto('/#/library?view=paste');
   await page.getByLabel('Titre').fill(title);
   await page.getByLabel('Texte (collez-le ici)').fill(content);
   await page.getByRole('button', { name: 'Enregistrer' }).click();

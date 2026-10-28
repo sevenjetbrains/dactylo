@@ -6,7 +6,23 @@ use std::sync::{Arc, Mutex};
 use dactylo_core::events::EventBus;
 use dactylo_core::settings::PracticeSettings;
 use dactylo_core::typing::TypingSession;
+use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
+
+/// Exercice d'une session : rang, nombre d'exercices du texte et portion tapée (F-24).
+/// Il est enregistré avec les réglages de la session pour pouvoir la reconstruire.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionExercise {
+    /// Rang de l'exercice, à partir de 0.
+    pub index: u32,
+    /// Nombre d'exercices du texte.
+    pub count: u32,
+    /// Premier graphème de l'exercice dans le texte.
+    pub start: u32,
+    /// Graphème qui suit le dernier (borne exclue).
+    pub end: u32,
+}
 
 /// Session de copie en cours, gardée en mémoire entre deux lots de frappes.
 /// Elle est reconstruite depuis la base si elle manque (redémarrage, NF-06).
@@ -18,7 +34,9 @@ pub struct LiveSession {
     pub text_id: String,
     /// Réglages figés au début de la session.
     pub settings: PracticeSettings,
-    /// Comparaison de frappe, rejouée jusqu'à la dernière frappe reçue.
+    /// Exercice tapé.
+    pub exercise: SessionExercise,
+    /// Comparaison de frappe sur l'exercice, rejouée jusqu'à la dernière frappe reçue.
     pub typing: TypingSession,
 }
 

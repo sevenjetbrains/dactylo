@@ -54,7 +54,11 @@ describe('HomePage', () => {
     // Raccourci d'en-tête vers l'ajout d'un texte.
     expect(screen.getByRole('link', { name: 'Coller un texte' })).toHaveAttribute(
       'href',
-      '/library',
+      '/library?view=paste',
+    );
+    expect(screen.getByRole('link', { name: 'Importer un PDF' })).toHaveAttribute(
+      'href',
+      '/library?view=pdf',
     );
     // Pas de carte de reprise sans session interrompue.
     expect(screen.queryByText('Reprendre la copie')).not.toBeInTheDocument();
@@ -63,12 +67,19 @@ describe('HomePage', () => {
   it('propose de reprendre une session interrompue (NF-06)', async () => {
     pendingSession.mockResolvedValue({
       status: 'ok',
-      data: { sessionId: 's1', title: 'Le loup', progress: 0.42, startedAt: 0 },
+      data: {
+        sessionId: 's1',
+        title: 'Le loup',
+        exercise: { index: 2, count: 8 },
+        progress: 0.42,
+        startedAt: 0,
+      },
     });
     renderHome();
     // Carte de reprise : titre du texte, avancement et bouton Continuer.
     expect(await screen.findByText('Reprendre la copie')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Le loup' })).toBeInTheDocument();
+    expect(screen.getByText('Exercice 3 sur 8')).toBeInTheDocument();
     expect(screen.getByText('42 %')).toBeInTheDocument();
     expect(screen.getByRole('progressbar', { name: 'Progression' })).toHaveAttribute(
       'aria-valuenow',

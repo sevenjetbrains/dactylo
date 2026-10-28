@@ -18,10 +18,12 @@ interface Props {
   onRestart: () => void;
   /** Passer au texte suivant. */
   onNext: () => void;
+  /** Passer à l'exercice `index` du même texte (F-24). */
+  onNextExercise: (index: number) => void;
 }
 
 /** Écran de fin de session (F-32) : chiffres, mots fautifs, comparaison à la moyenne. */
-export function SessionSummary({ summary, onRestart, onNext }: Props) {
+export function SessionSummary({ summary, onRestart, onNext, onNextExercise }: Props) {
   const { t, i18n } = useTranslation('practice');
   const { stats, average, errors } = summary;
   const lang = i18n.language;
@@ -104,9 +106,19 @@ export function SessionSummary({ summary, onRestart, onNext }: Props) {
           </ul>
         )}
       </Card>
-      {/* Actions : recommencer, texte suivant, bibliothèque. */}
+      {/* Actions : exercice suivant s'il y en a un, recommencer, texte suivant, bibliothèque. */}
       <div className="flex flex-wrap gap-3">
-        <Button onClick={onRestart}>{t('summary.restart')}</Button>
+        {summary.nextExercise != null && (
+          <Button onClick={() => onNextExercise(summary.nextExercise ?? 0)}>
+            {t('summary.nextExercise', {
+              current: summary.nextExercise + 1,
+              count: summary.exercise.count,
+            })}
+          </Button>
+        )}
+        <Button variant={summary.nextExercise != null ? 'outline' : 'default'} onClick={onRestart}>
+          {t('summary.restart')}
+        </Button>
         <Button variant="outline" onClick={onNext}>
           {t('summary.next')}
         </Button>

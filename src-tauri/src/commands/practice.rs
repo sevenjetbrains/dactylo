@@ -1,7 +1,8 @@
 //! Commandes du mode Copie : réglages, session, frappes, fin et reprise
-//! (F-01 à F-07, F-30 à F-32, NF-06).
+//! (F-01 à F-07, F-24, F-30 à F-32, NF-06).
 
 use dactylo_core::events::DomainEvent;
+use dactylo_core::exercise::{exercises, next_exercise};
 use dactylo_core::settings::PracticeSettings;
 use dactylo_core::stats::{self, AverageStats, SessionStats};
 use dactylo_core::text::{WordSpan, graphemes, wrap};
@@ -11,12 +12,32 @@ use tauri::State;
 
 use crate::db::{profiles, sessions, texts};
 use crate::error::{AppError, AppResult};
-use crate::state::{AppState, LiveSession};
+use crate::state::{AppState, LiveSession, SessionExercise};
 
 /// Clé des réglages du module dans `profiles.settings` (ADR 0010).
 const SETTINGS_KEY: &str = "practice";
 /// Nombre de sessions de la moyenne affichée en fin de session (F-32).
 const AVERAGE_OVER: u32 = 10;
+
+/// Position d'un exercice dans son texte, pour l'affichage « exercice 3 sur 8 ».
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ExerciseInfo {
+    /// Rang de l'exercice, à partir de 0.
+    pub index: u32,
+    /// Nombre d'exercices du texte.
+    pub count: u32,
+}
+
+impl From<SessionExercise> for ExerciseInfo {
+    /// Garde le rang et le nombre, sans la portion du texte.
+    fn from(e: SessionExercise) -> Self {
+        Self {
+            index: e.index,
+            count: e.count,
+        }
+    }
+}
 
 /// Tout ce qu'il faut à l'interface pour afficher une session.
 #[derive(Debug, Clone, Serialize, specta::Type)]
@@ -28,7 +49,9 @@ pub struct SessionStart {
     pub text_id: String,
     /// Titre du texte.
     pub title: String,
-    /// Texte découpé en graphèmes : les positions des deux côtés coïncident (ADR 0008).
+    /// Exercice tapé (F-24).
+    pub exercise: ExerciseInfo,
+    /// Exercice découpé en graphèmes : les positions des deux côtés coïncident (ADR 0008).
     pub graphemes: Vec<String>,
     /// Bornes des mots, pour l'objectif « nombre de mots ».
     pub words: Vec<WordSpan>,
@@ -48,7 +71,9 @@ pub struct PendingSession {
     pub session_id: String,
     /// Titre du texte.
     pub title: String,
-    /// Avancement, de 0 à 1.
+    /// Exercice interrompu.
+    pub exercise: ExerciseInfo,
+    /// Avancement dans l'exercice, de 0 à 1.
     pub progress: f64,
     /// Début, en ms Unix.
     pub started_at: i64,
@@ -62,6 +87,10 @@ pub struct SessionSummary {
     pub session_id: String,
     /// Texte tapé, pour enchaîner sur le suivant.
     pub text_id: String,
+    /// Exercice tapé.
+    pub exercise: ExerciseInfo,
+    /// Exercice suivant du même texte, s'il y en a un.
+    pub next_exercise: Option<u32>,
     /// Chiffres de la session.
     pub stats: SessionStats,
     /// Mots et caractères fautifs.
@@ -87,8 +116,45 @@ pub async fn store_settings(
     Ok(settings)
 }
 
-/// Démarre une session sur `text_id`, ou sur le texte le plus récent.
-pub async fn start(state: &AppState, text_id: Option<String>) -> AppResult<SessionStart> {
+/// Réglages de la session et exercice, enregistrés ensemble dans `sessions.settings`.
+fn session_settings_json(
+    settings: &PracticeSettings,
+    exercise: SessionExercise,
+) -> AppResult<String> {
+    let invalid = |e: serde_json::Error| AppError::Invalid(e.to_string());
+    let mut value = serde_json::to_value(settings).map_err(invalid)?;
+    value["exercise"] = serde_json::to_value(exercise).map_err(invalid)?;
+    Ok(value.to_string())
+}
+
+/// Exercice enregistré avec la session ; texte entier pour une session antérieure à F-24.
+fn session_exercise(settings: Option<&serde_json::Value>, text_len: usize) -> SessionExercise {
+    settings
+        .and_then(|v| v.get("exercise"))
+        .and_then(|v| serde_json::from_value(v.clone()).ok())
+        .unwrap_or(SessionExercise {
+            index: 0,
+            count: 1,
+            start: 0,
+            end: text_len as u32,
+        })
+}
+
+/// Graphèmes de l'exercice ; bornes ramenées dans le texte s'il a changé depuis.
+fn exercise_graphemes(content: &str, exercise: SessionExercise) -> Vec<String> {
+    let all = graphemes(content);
+    let end = (exercise.end as usize).min(all.len());
+    let start = (exercise.start as usize).min(end);
+    all[start..end].to_vec()
+}
+
+/// Démarre une session sur `text_id` (ou le texte le plus récent), sur l'exercice
+/// demandé ou, à défaut, sur le prochain exercice du profil (F-24).
+pub async fn start(
+    state: &AppState,
+    text_id: Option<String>,
+    exercise: Option<u32>,
+) -> AppResult<SessionStart> {
     // Sans texte précisé, on prend le plus récent de la bibliothèque.
     let text_id = match text_id {
         Some(id) => id,
@@ -99,16 +165,46 @@ pub async fn start(state: &AppState, text_id: Option<String>) -> AppResult<Sessi
     // Les réglages sont copiés dans la session : les changer ensuite ne l'affecte pas.
     let text = texts::get(&state.pool, &text_id).await?;
     let settings = load_settings(state).await?;
-    let settings_json =
-        serde_json::to_string(&settings).map_err(|e| AppError::Invalid(e.to_string()))?;
+
+    // Exercices du texte ; l'exercice demandé doit exister, sinon le prochain à faire.
+    let spans = exercises(&graphemes(&text.content), text.segmentation);
+    let count = spans.len() as u32;
+    let index = match exercise {
+        Some(i) if i < count => i,
+        Some(i) => {
+            return Err(AppError::Invalid(format!(
+                "exercice {} absent : le texte en compte {count}",
+                i + 1
+            )));
+        }
+        None => {
+            let done = texts::progress(&state.pool, &state.profile_id, &text.id).await?;
+            next_exercise(done, spans.len())
+        }
+    };
+    let span = spans[index as usize];
+    let exercise = SessionExercise {
+        index,
+        count,
+        start: span.start,
+        end: span.end,
+    };
+
+    // Session enregistrée avec ses réglages et son exercice ; le texte est noté ouvert.
+    let settings_json = session_settings_json(&settings, exercise)?;
     let row = sessions::start(&state.pool, &state.profile_id, &text.id, &settings_json).await?;
+    texts::touch_progress(&state.pool, &state.profile_id, &text.id, None).await?;
 
     // Le découpage en graphèmes vient du cœur et est envoyé tel quel à l'interface.
-    let typing = TypingSession::new(graphemes(&text.content), settings.rules());
+    let typing = TypingSession::new(
+        exercise_graphemes(&text.content, exercise),
+        settings.rules(),
+    );
     let start = SessionStart {
         session_id: row.id.clone(),
         text_id: text.id.clone(),
         title: text.title,
+        exercise: exercise.into(),
         graphemes: typing.text().to_vec(),
         words: typing.words().to_vec(),
         settings,
@@ -122,6 +218,7 @@ pub async fn start(state: &AppState, text_id: Option<String>) -> AppResult<Sessi
             profile_id: state.profile_id.clone(),
             text_id: text.id,
             settings,
+            exercise,
             typing,
         },
     );
@@ -145,16 +242,22 @@ async fn take_live(state: &AppState, session_id: &str) -> AppResult<LiveSession>
     let text_id = row
         .text_id
         .ok_or_else(|| AppError::NotFound(format!("texte de la session {session_id}")))?;
-    // Reconstruction : texte, réglages figés, puis toutes les frappes rejouées.
+    // Reconstruction : texte, réglages et exercice figés, puis toutes les frappes rejouées.
     let text = texts::get(&state.pool, &text_id).await?;
-    let settings_value = serde_json::from_str(&row.settings).ok();
+    let settings_value: Option<serde_json::Value> = serde_json::from_str(&row.settings).ok();
     let settings = PracticeSettings::from_json(settings_value.as_ref());
+    let exercise = session_exercise(settings_value.as_ref(), graphemes(&text.content).len());
     let keystrokes = sessions::keystrokes(&state.pool, session_id).await?;
-    let typing = TypingSession::replay(graphemes(&text.content), settings.rules(), &keystrokes);
+    let typing = TypingSession::replay(
+        exercise_graphemes(&text.content, exercise),
+        settings.rules(),
+        &keystrokes,
+    );
     Ok(LiveSession {
         profile_id: row.profile_id,
         text_id,
         settings,
+        exercise,
         typing,
     })
 }
@@ -193,6 +296,19 @@ pub async fn finish(
     let errors = live.typing.errors();
     sessions::finish(&state.pool, session_id, &session_stats, &errors).await?;
 
+    // Exercice tapé jusqu'au bout : la progression du texte avance (F-24). Une session
+    // chronométrée arrêtée avant la fin ne compte pas.
+    let exercise = live.exercise;
+    if live.typing.position() >= live.typing.text().len() {
+        texts::touch_progress(
+            &state.pool,
+            &live.profile_id,
+            &live.text_id,
+            Some(exercise.index + 1),
+        )
+        .await?;
+    }
+
     // Sessions précédentes pour la comparaison de l'écran de fin.
     let recent =
         sessions::recent_stats(&state.pool, &live.profile_id, session_id, AVERAGE_OVER).await?;
@@ -214,6 +330,8 @@ pub async fn finish(
     Ok(SessionSummary {
         session_id: session_id.to_owned(),
         text_id: live.text_id,
+        exercise: exercise.into(),
+        next_exercise: (exercise.index + 1 < exercise.count).then_some(exercise.index + 1),
         stats: session_stats,
         errors,
         average: stats::average(&recent),
@@ -247,6 +365,7 @@ pub async fn pending(state: &AppState) -> AppResult<Option<PendingSession>> {
     let pending = PendingSession {
         session_id: row.id.clone(),
         title,
+        exercise: live.exercise.into(),
         progress: live.typing.position() as f64 / len as f64,
         started_at: row.started_at,
     };
@@ -262,6 +381,7 @@ pub async fn resume(state: &AppState, session_id: &str) -> AppResult<SessionStar
         session_id: session_id.to_owned(),
         text_id: live.text_id.clone(),
         title: text.title,
+        exercise: live.exercise.into(),
         graphemes: live.typing.text().to_vec(),
         words: live.typing.words().to_vec(),
         settings: live.settings,
@@ -297,14 +417,15 @@ pub async fn save_practice_settings(
     store_settings(&state, settings).await
 }
 
-/// Commande : démarre une session de copie.
+/// Commande : démarre une session de copie, sur un exercice précis ou le prochain.
 #[tauri::command]
 #[specta::specta]
 pub async fn start_session(
     state: State<'_, AppState>,
     text_id: Option<String>,
+    exercise: Option<u32>,
 ) -> AppResult<SessionStart> {
-    start(&state, text_id).await
+    start(&state, text_id, exercise).await
 }
 
 /// Commande : enregistre un lot de frappes (F-31).

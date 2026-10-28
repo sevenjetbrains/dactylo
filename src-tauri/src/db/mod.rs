@@ -1,5 +1,7 @@
 //! Accès SQLite : ouverture, PRAGMA et migrations automatiques (NF-05).
 
+/// Pack de textes intégré (F-25).
+pub mod builtin;
 /// Profils utilisateurs et leurs réglages.
 pub mod profiles;
 /// Sessions, frappes et fautes.
@@ -71,7 +73,8 @@ mod tests {
     use super::*;
 
     /// Tables attendues après les migrations, par ordre alphabétique.
-    const TABLES: [&str; 9] = [
+    const TABLES: [&str; 10] = [
+        "app_meta",
         "dictation_profiles",
         "keystrokes",
         "profiles",

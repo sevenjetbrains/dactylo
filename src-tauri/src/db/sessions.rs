@@ -264,25 +264,17 @@ mod tests {
     use dactylo_core::typing::ErrorType;
 
     use super::*;
-    use crate::db::texts::{self, NewText};
+    use crate::db::texts::{self, TextRecord};
     use crate::db::{connect_in_memory, profiles};
 
     /// Base en mémoire avec le profil par défaut et un texte « ab ».
     async fn setup() -> (SqlitePool, String, String) {
         let pool = connect_in_memory().await.unwrap();
         let profile = profiles::ensure_default(&pool).await.unwrap();
-        let text = texts::create(
-            &pool,
-            NewText {
-                title: "T".into(),
-                content: "ab".into(),
-                tags: vec![],
-                language: "fr".into(),
-            },
-        )
-        .await
-        .unwrap();
-        (pool, profile.id, text.id)
+        let text = texts::create(&pool, TextRecord::pasted("T", "ab"))
+            .await
+            .unwrap();
+        (pool, profile.id, text)
     }
 
     /// Insertion résolue numéro `seq`, à la position `seq`.

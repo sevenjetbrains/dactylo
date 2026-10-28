@@ -41,7 +41,8 @@
     "noMistake": "Bravo, aucun mot mal écrit !",
     "restart": "Recommencer",
     "next": "Texte suivant",
-    "library": "Bibliothèque"
+    "library": "Bibliothèque",
+    "nextExercise": "Exercice suivant ({{current}} sur {{count}})"
   },
   "errorType": {
     "accent": "accent",
@@ -107,5 +108,6 @@
   "corrections": {
     "free": "Libre",
     "blocking": "Bloquante"
-  }
+  },
+  "exercise": "Exercice {{current}} sur {{count}}"
 }

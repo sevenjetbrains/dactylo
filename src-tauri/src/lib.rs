@@ -46,6 +46,8 @@ pub fn run() {
             let pool = tauri::async_runtime::block_on(db::connect(&data_dir.join(DB_FILE)))?;
             // Un profil existe toujours : celui par défaut est créé au premier lancement.
             let profile = tauri::async_runtime::block_on(db::profiles::ensure_default(&pool))?;
+            // Pack de textes intégré, inséré une seule fois (F-25).
+            tauri::async_runtime::block_on(db::builtin::seed(&pool))?;
 
             // Bus d'événements ; l'interface y est abonnée via le relais.
             let bus = Arc::new(EventBus::new());

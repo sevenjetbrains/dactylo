@@ -1,9 +1,15 @@
 {
   "menu": "Bibliothèque",
   "title": "Bibliothèque",
+  "actions": {
+    "paste": "Coller un texte",
+    "pdf": "Importer un PDF",
+    "back": "Retour à la liste"
+  },
   "paste": {
-    "title": "Ajouter un texte",
+    "title": "Coller un texte",
     "textTitle": "Titre",
+    "author": "Auteur (facultatif)",
     "content": "Texte (collez-le ici)",
     "tags": "Étiquettes",
     "tagsHint": "Séparées par des virgules, ex. : conte, Maupassant",
@@ -11,12 +17,92 @@
     "submit": "Enregistrer",
     "saved": "« {{title}} » a été ajouté."
   },
-  "languages": { "fr": "Français", "en": "Anglais" },
+  "segmentation": {
+    "label": "Découpage en exercices",
+    "whole": "Texte entier",
+    "paragraphs": "Par paragraphes",
+    "lines": "Par lignes",
+    "count": "Nombre par exercice",
+    "hint_one": "{{count}} exercice",
+    "hint_other": "{{count}} exercices"
+  },
+  "pdf": {
+    "title": "Importer un PDF",
+    "file": "Fichier PDF",
+    "opening": "Ouverture du PDF…",
+    "invalid": "Ce fichier n'est pas un PDF lisible.",
+    "pageCount_one": "{{count}} page",
+    "pageCount_other": "{{count}} pages",
+    "preview": "Aperçu de la page {{page}}",
+    "previousPage": "Page précédente",
+    "nextPage": "Page suivante",
+    "pagesStep": "1. Pages",
+    "firstPage": "De la page",
+    "lastPage": "à la page",
+    "extract": "Afficher les lignes",
+    "extracting": "Extraction du texte…",
+    "linesStep": "2. Lignes",
+    "linesHint": "Choisissez la première et la dernière ligne à garder, ou un nombre de lignes.",
+    "firstLine": "Première ligne",
+    "lastLine": "Dernière ligne",
+    "lineCount": "Nombre de lignes",
+    "lineLabel": "Ligne {{line}}, page {{page}}",
+    "cleanStep": "3. Nettoyage",
+    "options": {
+      "removePageNumbers": "Supprimer les numéros de page",
+      "removeHeaders": "Supprimer les en-têtes et pieds de page répétés",
+      "joinHyphens": "Recoller les mots coupés en fin de ligne",
+      "reflow": "Reconstituer les paragraphes",
+      "normalizeSpacing": "Normaliser les espaces et les apostrophes"
+    },
+    "saveStep": "4. Vérification et enregistrement",
+    "content": "Texte nettoyé (modifiable)",
+    "contentHint": "Corrigez le texte en dernier : changer les pages, les lignes ou le nettoyage le recalcule.",
+    "submit": "Enregistrer le texte"
+  },
+  "edit": {
+    "title": "Modifier « {{title}} »",
+    "content": "Texte",
+    "submit": "Enregistrer les modifications",
+    "resetWarning": "Changer le texte ou le découpage remet la progression à zéro.",
+    "saved": "« {{title}} » a été modifié."
+  },
+  "languages": {
+    "fr": "Français",
+    "en": "Anglais"
+  },
+  "filters": {
+    "search": "Rechercher",
+    "searchPlaceholder": "Titre, auteur, étiquette…",
+    "tag": "Étiquette",
+    "allTags": "Toutes",
+    "sort": "Trier par",
+    "sorts": {
+      "newest": "Plus récents",
+      "oldest": "Plus anciens",
+      "shortest": "Plus courts",
+      "longest": "Plus longs",
+      "bestScore": "Meilleur score"
+    }
+  },
   "list": {
     "title": "Mes textes",
     "empty": "La bibliothèque est vide.",
+    "noMatch": "Aucun texte ne correspond.",
     "meta": "{{length}} caractères · ajouté le {{date}}",
+    "builtin": "Pack intégré",
+    "pdfPages": "PDF, p. {{pages}}",
+    "exercise": "Exercice {{current}} sur {{count}}",
+    "exercisesDone": "{{done}} / {{count}} exercices faits",
+    "best": "Meilleur : {{wpm}} MPM",
     "practice": "S'entraîner",
-    "practiceLabel": "S'entraîner sur « {{title}} »"
+    "practiceLabel": "S'entraîner sur « {{title}} »",
+    "edit": "Modifier « {{title}} »",
+    "duplicate": "Dupliquer « {{title}} »",
+    "delete": "Supprimer « {{title}} »",
+    "confirmDelete": "Confirmer la suppression",
+    "cancel": "Annuler",
+    "duplicated": "« {{title}} » a été dupliqué.",
+    "deleted": "« {{title}} » a été supprimé."
   }
 }

@@ -12,15 +12,29 @@ export const commands = {
 	/**  Renvoie le profil actif. */
 	currentProfile: () => typedError<Profile, ApiError>(__TAURI_INVOKE("current_profile")),
 	/**  Commande : ajoute un texte collé à la bibliothèque (F-20). */
-	createText: (input: NewText) => typedError<TextSummary, ApiError>(__TAURI_INVOKE("create_text", { input })),
-	/**  Commande : liste les textes de la bibliothèque. */
-	listTexts: () => typedError<TextSummary[], ApiError>(__TAURI_INVOKE("list_texts")),
+	createText: (input: NewText_Deserialize) => typedError<TextSummary_Serialize, ApiError>(__TAURI_INVOKE("create_text", { input })),
+	/**  Commande : aperçu d'un import PDF (lignes et texte nettoyé). */
+	previewPdf: (source: PdfSource_Deserialize) => typedError<PdfPreview, ApiError>(__TAURI_INVOKE("preview_pdf", { source })),
+	/**  Commande : enregistre le texte d'un PDF (F-21). */
+	importPdf: (input: PdfText_Deserialize) => typedError<TextSummary_Serialize, ApiError>(__TAURI_INVOKE("import_pdf", { input })),
+	/**  Commande : liste les textes de la bibliothèque, filtrés et triés. */
+	listTexts: (query: TextQuery_Deserialize) => typedError<TextSummary_Serialize[], ApiError>(__TAURI_INVOKE("list_texts", { query })),
+	/**  Commande : étiquettes utilisées, pour le filtre. */
+	listTags: () => typedError<string[], ApiError>(__TAURI_INVOKE("list_tags")),
+	/**  Commande : texte complet, pour l'éditer. */
+	getText: (id: string) => typedError<TextContent_Serialize, ApiError>(__TAURI_INVOKE("get_text", { id })),
+	/**  Commande : modifie un texte. */
+	updateText: (id: string, input: TextUpdate_Deserialize) => typedError<TextSummary_Serialize, ApiError>(__TAURI_INVOKE("update_text", { id, input })),
+	/**  Commande : supprime un texte. */
+	deleteText: (id: string) => typedError<null, ApiError>(__TAURI_INVOKE("delete_text", { id })),
+	/**  Commande : duplique un texte. */
+	duplicateText: (id: string) => typedError<TextSummary_Serialize, ApiError>(__TAURI_INVOKE("duplicate_text", { id })),
 	/**  Commande : lit les réglages du mode Copie. */
 	getPracticeSettings: () => typedError<PracticeSettings_Serialize, ApiError>(__TAURI_INVOKE("get_practice_settings")),
 	/**  Commande : enregistre les réglages du mode Copie. */
 	savePracticeSettings: (settings: PracticeSettings_Deserialize) => typedError<PracticeSettings_Serialize, ApiError>(__TAURI_INVOKE("save_practice_settings", { settings })),
-	/**  Commande : démarre une session de copie. */
-	startSession: (textId: string | null) => typedError<SessionStart_Serialize, ApiError>(__TAURI_INVOKE("start_session", { textId })),
+	/**  Commande : démarre une session de copie, sur un exercice précis ou le prochain. */
+	startSession: (textId: string | null, exercise: number | null) => typedError<SessionStart_Serialize, ApiError>(__TAURI_INVOKE("start_session", { textId, exercise })),
 	/**  Commande : enregistre un lot de frappes (F-31). */
 	recordKeystrokes: (sessionId: string, keystrokes: Keystroke_Deserialize[]) => typedError<number | null, ApiError>(__TAURI_INVOKE("record_keystrokes", { sessionId, keystrokes })),
 	/**  Commande : clôt la session et renvoie le résumé (F-30, F-32). */
@@ -76,6 +90,37 @@ export type AverageStats = {
 	cpm: number | null,
 	/**  Précision moyenne, en %. */
 	accuracy: number | null,
+};
+
+/**  Étapes du nettoyage, toutes actives par défaut ; l'utilisateur peut en couper. */
+export type CleanOptions = CleanOptions_Serialize | CleanOptions_Deserialize;
+
+/**  Étapes du nettoyage, toutes actives par défaut ; l'utilisateur peut en couper. */
+export type CleanOptions_Deserialize = {
+	/**  Supprimer les numéros de page en haut ou en bas de page. */
+	removePageNumbers?: boolean,
+	/**  Supprimer les en-têtes et pieds de page répétés. */
+	removeHeaders?: boolean,
+	/**  Recoller les mots coupés en fin de ligne (« exem- / ple »). */
+	joinHyphens?: boolean,
+	/**  Reconstituer les paragraphes au lieu de garder chaque ligne du PDF. */
+	reflow?: boolean,
+	/**  Espaces multiples ou insécables → une espace ; apostrophes courbes → '. */
+	normalizeSpacing?: boolean,
+};
+
+/**  Étapes du nettoyage, toutes actives par défaut ; l'utilisateur peut en couper. */
+export type CleanOptions_Serialize = {
+	/**  Supprimer les numéros de page en haut ou en bas de page. */
+	removePageNumbers: boolean,
+	/**  Supprimer les en-têtes et pieds de page répétés. */
+	removeHeaders: boolean,
+	/**  Recoller les mots coupés en fin de ligne (« exem- / ple »). */
+	joinHyphens: boolean,
+	/**  Reconstituer les paragraphes au lieu de garder chaque ligne du PDF. */
+	reflow: boolean,
+	/**  Espaces multiples ou insécables → une espace ; apostrophes courbes → '. */
+	normalizeSpacing: boolean,
 };
 
 /**  Comportement face à une erreur (F-04). */
@@ -149,6 +194,14 @@ export type ErrorType =
 /**  Majuscule ou minuscule erronée. */
 "case";
 
+/**  Position d'un exercice dans son texte, pour l'affichage « exercice 3 sur 8 ». */
+export type ExerciseInfo = {
+	/**  Rang de l'exercice, à partir de 0. */
+	index: number,
+	/**  Nombre d'exercices du texte. */
+	count: number,
+};
+
 /**  Nature d'une frappe. */
 export type KeyKind = 
 /**  Saisie d'un graphème. */
@@ -183,8 +236,19 @@ export type Keystroke_Serialize = {
 	tMs: number,
 };
 
-/**  Texte saisi par l'utilisateur (F-20). */
-export type NewText = {
+/**  Lignes retenues après nettoyage, bornes comprises, numérotées à partir de 1. */
+export type LineSelection = {
+	/**  Première ligne retenue. */
+	first: number,
+	/**  Dernière ligne retenue, comprise. */
+	last: number,
+};
+
+/**  Texte collé par l'utilisateur (F-20). */
+export type NewText = NewText_Serialize | NewText_Deserialize;
+
+/**  Texte collé par l'utilisateur (F-20). */
+export type NewText_Deserialize = {
 	/**  Titre, obligatoire. */
 	title: string,
 	/**  Contenu, obligatoire. */
@@ -193,6 +257,130 @@ export type NewText = {
 	tags: string[],
 	/**  Code de langue (« fr » si vide). */
 	language: string,
+	/**  Auteur, facultatif. */
+	author?: string | null,
+	/**  Découpage en exercices ; texte entier par défaut. */
+	segmentation?: Segmentation,
+};
+
+/**  Texte collé par l'utilisateur (F-20). */
+export type NewText_Serialize = {
+	/**  Titre, obligatoire. */
+	title: string,
+	/**  Contenu, obligatoire. */
+	content: string,
+	/**  Catégorie et étiquettes libres. */
+	tags: string[],
+	/**  Code de langue (« fr » si vide). */
+	language: string,
+	/**  Auteur, facultatif. */
+	author: string | null,
+	/**  Découpage en exercices ; texte entier par défaut. */
+	segmentation: Segmentation,
+};
+
+/**  Plage de pages, bornes comprises (ex. 3 à 5). */
+export type PageRange = {
+	/**  Première page, à partir de 1. */
+	first: number,
+	/**  Dernière page, comprise. */
+	last: number,
+};
+
+/**  Lignes d'une page, telles qu'extraites par pdf.js. */
+export type PdfPage = {
+	/**  Numéro de la page dans le document, à partir de 1. */
+	number: number,
+	/**  Lignes de texte, de haut en bas. */
+	lines: string[],
+};
+
+/**  Aperçu d'un import PDF : lignes des pages et texte nettoyé (F-21, F-22). */
+export type PdfPreview = {
+	/**  Lignes des pages retenues, numérotées à partir de 1 dans l'ordre. */
+	lines: SourceLine[],
+	/**  Texte nettoyé et assemblé à partir des lignes choisies. */
+	content: string,
+};
+
+/**  PDF à importer : pages extraites, plage, lignes et options de nettoyage. */
+export type PdfSource = PdfSource_Serialize | PdfSource_Deserialize;
+
+/**  PDF à importer : pages extraites, plage, lignes et options de nettoyage. */
+export type PdfSource_Deserialize = {
+	/**  Nom du fichier, gardé comme origine du texte. */
+	fileName: string,
+	/**
+	 *  Pages extraites : celles de la plage, et si possible quelques voisines,
+	 *  qui aident à reconnaître les en-têtes répétés.
+	 */
+	pages: PdfPage[],
+	/**  Pages retenues. */
+	range: PageRange,
+	/**  Lignes retenues parmi celles des pages ; toutes si absent. */
+	lines?: LineSelection | null,
+	/**  Étapes du nettoyage. */
+	options?: CleanOptions_Deserialize,
+};
+
+/**  PDF à importer : pages extraites, plage, lignes et options de nettoyage. */
+export type PdfSource_Serialize = {
+	/**  Nom du fichier, gardé comme origine du texte. */
+	fileName: string,
+	/**
+	 *  Pages extraites : celles de la plage, et si possible quelques voisines,
+	 *  qui aident à reconnaître les en-têtes répétés.
+	 */
+	pages: PdfPage[],
+	/**  Pages retenues. */
+	range: PageRange,
+	/**  Lignes retenues parmi celles des pages ; toutes si absent. */
+	lines: LineSelection | null,
+	/**  Étapes du nettoyage. */
+	options: CleanOptions_Serialize,
+};
+
+/**  Texte importé d'un PDF, tel que validé (et éventuellement corrigé) par l'utilisateur. */
+export type PdfText = PdfText_Serialize | PdfText_Deserialize;
+
+/**  Texte importé d'un PDF, tel que validé (et éventuellement corrigé) par l'utilisateur. */
+export type PdfText_Deserialize = {
+	/**  Titre, obligatoire. */
+	title: string,
+	/**  Auteur, facultatif. */
+	author?: string | null,
+	/**  Étiquettes. */
+	tags: string[],
+	/**  Code de langue. */
+	language: string,
+	/**  Découpage en exercices. */
+	segmentation: Segmentation,
+	/**  Nom du fichier d'origine. */
+	fileName: string,
+	/**  Pages retenues. */
+	range: PageRange,
+	/**  Texte de l'aperçu, modifiable avant validation (F-22). */
+	content: string,
+};
+
+/**  Texte importé d'un PDF, tel que validé (et éventuellement corrigé) par l'utilisateur. */
+export type PdfText_Serialize = {
+	/**  Titre, obligatoire. */
+	title: string,
+	/**  Auteur, facultatif. */
+	author: string | null,
+	/**  Étiquettes. */
+	tags: string[],
+	/**  Code de langue. */
+	language: string,
+	/**  Découpage en exercices. */
+	segmentation: Segmentation,
+	/**  Nom du fichier d'origine. */
+	fileName: string,
+	/**  Pages retenues. */
+	range: PageRange,
+	/**  Texte de l'aperçu, modifiable avant validation (F-22). */
+	content: string,
 };
 
 /**  Session interrompue proposée à la reprise (NF-06). */
@@ -201,7 +389,9 @@ export type PendingSession = {
 	sessionId: string,
 	/**  Titre du texte. */
 	title: string,
-	/**  Avancement, de 0 à 1. */
+	/**  Exercice interrompu. */
+	exercise: ExerciseInfo,
+	/**  Avancement dans l'exercice, de 0 à 1. */
 	progress: number | null,
 	/**  Début, en ms Unix. */
 	startedAt: number,
@@ -262,6 +452,19 @@ export type Profile = {
 	createdAt: number,
 };
 
+/**  Découpage d'un texte en exercices. */
+export type Segmentation = 
+/**  Un seul exercice : le texte entier. */
+{ type: "whole" } | 
+/**  `count` paragraphes par exercice. */
+{ type: "paragraphs"; 
+/**  Paragraphes par exercice. */
+count: number } | 
+/**  `count` lignes par exercice. */
+{ type: "lines"; 
+/**  Lignes par exercice. */
+count: number };
+
 /**  Type de session (F-06). */
 export type SessionGoal = 
 /**  Jusqu'au dernier caractère du texte. */
@@ -286,7 +489,9 @@ export type SessionStart_Deserialize = {
 	textId: string,
 	/**  Titre du texte. */
 	title: string,
-	/**  Texte découpé en graphèmes : les positions des deux côtés coïncident (ADR 0008). */
+	/**  Exercice tapé (F-24). */
+	exercise: ExerciseInfo,
+	/**  Exercice découpé en graphèmes : les positions des deux côtés coïncident (ADR 0008). */
 	graphemes: string[],
 	/**  Bornes des mots, pour l'objectif « nombre de mots ». */
 	words: WordSpan[],
@@ -306,7 +511,9 @@ export type SessionStart_Serialize = {
 	textId: string,
 	/**  Titre du texte. */
 	title: string,
-	/**  Texte découpé en graphèmes : les positions des deux côtés coïncident (ADR 0008). */
+	/**  Exercice tapé (F-24). */
+	exercise: ExerciseInfo,
+	/**  Exercice découpé en graphèmes : les positions des deux côtés coïncident (ADR 0008). */
 	graphemes: string[],
 	/**  Bornes des mots, pour l'objectif « nombre de mots ». */
 	words: WordSpan[],
@@ -347,6 +554,10 @@ export type SessionSummary_Deserialize = {
 	sessionId: string,
 	/**  Texte tapé, pour enchaîner sur le suivant. */
 	textId: string,
+	/**  Exercice tapé. */
+	exercise: ExerciseInfo,
+	/**  Exercice suivant du même texte, s'il y en a un. */
+	nextExercise?: number | null,
 	/**  Chiffres de la session. */
 	stats: SessionStats,
 	/**  Mots et caractères fautifs. */
@@ -361,6 +572,10 @@ export type SessionSummary_Serialize = {
 	sessionId: string,
 	/**  Texte tapé, pour enchaîner sur le suivant. */
 	textId: string,
+	/**  Exercice tapé. */
+	exercise: ExerciseInfo,
+	/**  Exercice suivant du même texte, s'il y en a un. */
+	nextExercise: number | null,
 	/**  Chiffres de la session. */
 	stats: SessionStats,
 	/**  Mots et caractères fautifs. */
@@ -369,20 +584,210 @@ export type SessionSummary_Serialize = {
 	average: AverageStats | null,
 };
 
-/**  Entrée de la liste de la bibliothèque. */
-export type TextSummary = {
+/**  Provenance d'un texte ; valeurs identiques à la contrainte `texts.source`. */
+export type SourceKind = 
+/**  Copier-coller (F-20). */
+"paste" | 
+/**  Import d'un PDF (F-21). */
+"pdf" | 
+/**  Pack de textes intégré (F-25). */
+"builtin";
+
+/**  Ligne nettoyée, avec sa page d'origine (aperçu et choix des lignes). */
+export type SourceLine = {
+	/**  Page d'où vient la ligne. */
+	page: number,
+	/**  Texte de la ligne. */
+	text: string,
+};
+
+/**  Texte complet, pour une session ou pour l'éditer. */
+export type TextContent = TextContent_Serialize | TextContent_Deserialize;
+
+/**  Texte complet, pour une session ou pour l'éditer. */
+export type TextContent_Deserialize = {
+	/**  Identifiant. */
+	id: string,
+	/**  Titre. */
+	title: string,
+	/**  Auteur. */
+	author?: string | null,
+	/**  Code de langue. */
+	language: string,
+	/**  Étiquettes. */
+	tags: string[],
+	/**  Provenance. */
+	source: SourceKind,
+	/**  Pages retenues (PDF). */
+	pages?: string | null,
+	/**  Contenu normalisé. */
+	content: string,
+	/**  Découpage en exercices. */
+	segmentation: Segmentation,
+};
+
+/**  Texte complet, pour une session ou pour l'éditer. */
+export type TextContent_Serialize = {
+	/**  Identifiant. */
+	id: string,
+	/**  Titre. */
+	title: string,
+	/**  Auteur. */
+	author: string | null,
+	/**  Code de langue. */
+	language: string,
+	/**  Étiquettes. */
+	tags: string[],
+	/**  Provenance. */
+	source: SourceKind,
+	/**  Pages retenues (PDF). */
+	pages: string | null,
+	/**  Contenu normalisé. */
+	content: string,
+	/**  Découpage en exercices. */
+	segmentation: Segmentation,
+};
+
+/**  Critères de la liste. */
+export type TextQuery = TextQuery_Serialize | TextQuery_Deserialize;
+
+/**  Critères de la liste. */
+export type TextQuery_Deserialize = {
+	/**  Mots recherchés dans le titre, les étiquettes et le fichier d'origine. */
+	search?: string,
+	/**  Étiquette exigée. */
+	tag?: string | null,
+	/**  Ordre. */
+	sort?: TextSort,
+};
+
+/**  Critères de la liste. */
+export type TextQuery_Serialize = {
+	/**  Mots recherchés dans le titre, les étiquettes et le fichier d'origine. */
+	search: string,
+	/**  Étiquette exigée. */
+	tag: string | null,
+	/**  Ordre. */
+	sort: TextSort,
+};
+
+/**  Ordre d'affichage de la bibliothèque. */
+export type TextSort = 
+/**  Plus récents d'abord. */
+"newest" | 
+/**  Plus anciens d'abord. */
+"oldest" | 
+/**  Plus courts d'abord. */
+"shortest" | 
+/**  Plus longs d'abord. */
+"longest" | 
+/**  Meilleur MPM net d'abord ; les textes jamais tapés à la fin. */
+"bestScore";
+
+/**  Entrée de la liste de la bibliothèque, avec la progression du profil. */
+export type TextSummary = TextSummary_Serialize | TextSummary_Deserialize;
+
+/**  Entrée de la liste de la bibliothèque, avec la progression du profil. */
+export type TextSummary_Deserialize = {
 	/**  Identifiant UUIDv7. */
 	id: string,
 	/**  Titre. */
 	title: string,
+	/**  Auteur, s'il est connu. */
+	author?: string | null,
 	/**  Code de langue. */
 	language: string,
 	/**  Étiquettes triées, sans doublon. */
 	tags: string[],
+	/**  Provenance. */
+	source: SourceKind,
+	/**  Fichier d'origine (PDF). */
+	sourceFile?: string | null,
+	/**  Pages retenues (PDF). */
+	pages?: string | null,
 	/**  Nombre de caractères du contenu. */
 	length: number,
 	/**  Date d'ajout, en ms Unix. */
 	createdAt: number,
+	/**  Découpage en exercices. */
+	segmentation: Segmentation,
+	/**  Nombre d'exercices (au moins 1). */
+	exerciseCount: number,
+	/**  Exercices terminés par le profil (au plus `exercise_count`). */
+	completed: number,
+	/**  Exercice à proposer ensuite, à partir de 0. */
+	nextExercise: number,
+	/**  Meilleur MPM net du profil sur ce texte. */
+	bestWpm?: number | null,
+};
+
+/**  Entrée de la liste de la bibliothèque, avec la progression du profil. */
+export type TextSummary_Serialize = {
+	/**  Identifiant UUIDv7. */
+	id: string,
+	/**  Titre. */
+	title: string,
+	/**  Auteur, s'il est connu. */
+	author: string | null,
+	/**  Code de langue. */
+	language: string,
+	/**  Étiquettes triées, sans doublon. */
+	tags: string[],
+	/**  Provenance. */
+	source: SourceKind,
+	/**  Fichier d'origine (PDF). */
+	sourceFile: string | null,
+	/**  Pages retenues (PDF). */
+	pages: string | null,
+	/**  Nombre de caractères du contenu. */
+	length: number,
+	/**  Date d'ajout, en ms Unix. */
+	createdAt: number,
+	/**  Découpage en exercices. */
+	segmentation: Segmentation,
+	/**  Nombre d'exercices (au moins 1). */
+	exerciseCount: number,
+	/**  Exercices terminés par le profil (au plus `exercise_count`). */
+	completed: number,
+	/**  Exercice à proposer ensuite, à partir de 0. */
+	nextExercise: number,
+	/**  Meilleur MPM net du profil sur ce texte. */
+	bestWpm: number | null,
+};
+
+/**  Modification d'un texte (F-23). */
+export type TextUpdate = TextUpdate_Serialize | TextUpdate_Deserialize;
+
+/**  Modification d'un texte (F-23). */
+export type TextUpdate_Deserialize = {
+	/**  Titre. */
+	title: string,
+	/**  Auteur. */
+	author?: string | null,
+	/**  Contenu. */
+	content: string,
+	/**  Étiquettes. */
+	tags: string[],
+	/**  Code de langue. */
+	language: string,
+	/**  Découpage en exercices. */
+	segmentation: Segmentation,
+};
+
+/**  Modification d'un texte (F-23). */
+export type TextUpdate_Serialize = {
+	/**  Titre. */
+	title: string,
+	/**  Auteur. */
+	author: string | null,
+	/**  Contenu. */
+	content: string,
+	/**  Étiquettes. */
+	tags: string[],
+	/**  Code de langue. */
+	language: string,
+	/**  Découpage en exercices. */
+	segmentation: Segmentation,
 };
 
 /**  Faute relevée dans une session. */

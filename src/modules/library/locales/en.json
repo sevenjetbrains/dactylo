@@ -1,9 +1,15 @@
 {
   "menu": "Library",
   "title": "Library",
+  "actions": {
+    "paste": "Paste a text",
+    "pdf": "Import a PDF",
+    "back": "Back to the list"
+  },
   "paste": {
-    "title": "Add a text",
+    "title": "Paste a text",
     "textTitle": "Title",
+    "author": "Author (optional)",
     "content": "Text (paste it here)",
     "tags": "Tags",
     "tagsHint": "Comma-separated, e.g. tale, Maupassant",
@@ -11,12 +17,92 @@
     "submit": "Save",
     "saved": "“{{title}}” was added."
   },
-  "languages": { "fr": "French", "en": "English" },
+  "segmentation": {
+    "label": "Split into exercises",
+    "whole": "Whole text",
+    "paragraphs": "By paragraphs",
+    "lines": "By lines",
+    "count": "Per exercise",
+    "hint_one": "{{count}} exercise",
+    "hint_other": "{{count}} exercises"
+  },
+  "pdf": {
+    "title": "Import a PDF",
+    "file": "PDF file",
+    "opening": "Opening the PDF…",
+    "invalid": "This file is not a readable PDF.",
+    "pageCount_one": "{{count}} page",
+    "pageCount_other": "{{count}} pages",
+    "preview": "Preview of page {{page}}",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "pagesStep": "1. Pages",
+    "firstPage": "From page",
+    "lastPage": "to page",
+    "extract": "Show the lines",
+    "extracting": "Extracting the text…",
+    "linesStep": "2. Lines",
+    "linesHint": "Choose the first and last lines to keep, or a number of lines.",
+    "firstLine": "First line",
+    "lastLine": "Last line",
+    "lineCount": "Number of lines",
+    "lineLabel": "Line {{line}}, page {{page}}",
+    "cleanStep": "3. Cleanup",
+    "options": {
+      "removePageNumbers": "Remove page numbers",
+      "removeHeaders": "Remove repeated headers and footers",
+      "joinHyphens": "Rejoin words split at line ends",
+      "reflow": "Rebuild paragraphs",
+      "normalizeSpacing": "Normalize spaces and apostrophes"
+    },
+    "saveStep": "4. Review and save",
+    "content": "Cleaned text (editable)",
+    "contentHint": "Edit the text last: changing pages, lines or cleanup recomputes it.",
+    "submit": "Save the text"
+  },
+  "edit": {
+    "title": "Edit “{{title}}”",
+    "content": "Text",
+    "submit": "Save changes",
+    "resetWarning": "Changing the text or its split resets the progress.",
+    "saved": "“{{title}}” was updated."
+  },
+  "languages": {
+    "fr": "French",
+    "en": "English"
+  },
+  "filters": {
+    "search": "Search",
+    "searchPlaceholder": "Title, author, tag…",
+    "tag": "Tag",
+    "allTags": "All",
+    "sort": "Sort by",
+    "sorts": {
+      "newest": "Newest",
+      "oldest": "Oldest",
+      "shortest": "Shortest",
+      "longest": "Longest",
+      "bestScore": "Best score"
+    }
+  },
   "list": {
     "title": "My texts",
     "empty": "The library is empty.",
+    "noMatch": "No text matches.",
     "meta": "{{length}} characters · added on {{date}}",
+    "builtin": "Built-in pack",
+    "pdfPages": "PDF, p. {{pages}}",
+    "exercise": "Exercise {{current}} of {{count}}",
+    "exercisesDone": "{{done}} / {{count}} exercises done",
+    "best": "Best: {{wpm}} WPM",
     "practice": "Practice",
-    "practiceLabel": "Practice on “{{title}}”"
+    "practiceLabel": "Practice on “{{title}}”",
+    "edit": "Edit “{{title}}”",
+    "duplicate": "Duplicate “{{title}}”",
+    "delete": "Delete “{{title}}”",
+    "confirmDelete": "Confirm deletion",
+    "cancel": "Cancel",
+    "duplicated": "“{{title}}” was duplicated.",
+    "deleted": "“{{title}}” was deleted."
   }
 }

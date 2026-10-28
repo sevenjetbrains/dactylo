@@ -29,18 +29,26 @@ const summary: Summary = {
     { expected: ',', typed: '.', errorType: 'punctuation', position: 8, word: false },
   ],
   average: { sessions: 10, wpmNet: 50, cpm: 280, accuracy: 98 },
+  exercise: { index: 0, count: 1 },
+  nextExercise: null,
 };
 
 /** Rend l'écran de fin et renvoie les deux rappels espions. */
 function renderSummary(s: Summary = summary) {
   const onRestart = vi.fn();
   const onNext = vi.fn();
+  const onNextExercise = vi.fn();
   render(
     <MemoryRouter>
-      <SessionSummary summary={s} onRestart={onRestart} onNext={onNext} />
+      <SessionSummary
+        summary={s}
+        onRestart={onRestart}
+        onNext={onNext}
+        onNextExercise={onNextExercise}
+      />
     </MemoryRouter>,
   );
-  return { onRestart, onNext };
+  return { onRestart, onNext, onNextExercise };
 }
 
 describe('SessionSummary (F-32)', () => {
@@ -82,6 +90,16 @@ describe('SessionSummary (F-32)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Texte suivant' }));
     expect(onRestart).toHaveBeenCalledOnce();
     expect(onNext).toHaveBeenCalledOnce();
+  });
+
+  it('propose l’exercice suivant d’un texte découpé (F-24)', async () => {
+    const { onNextExercise } = renderSummary({
+      ...summary,
+      exercise: { index: 2, count: 8 },
+      nextExercise: 3,
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Exercice suivant (4 sur 8)' }));
+    expect(onNextExercise).toHaveBeenCalledWith(3);
   });
 
   it('formate les durées', () => {

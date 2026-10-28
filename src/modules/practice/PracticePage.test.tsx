@@ -62,6 +62,7 @@ function sessionStart(overrides: Record<string, unknown> = {}) {
     sessionId: 's1',
     textId: 't1',
     title: 'Le chat',
+    exercise: { index: 0, count: 1 },
     graphemes: splitGraphemes('le chat'),
     words: [
       { start: 0, end: 2 },
@@ -90,6 +91,8 @@ const summary = {
   },
   errors: [{ expected: 'le', typed: 'lx', errorType: 'substitution', position: 0, word: true }],
   average: null,
+  exercise: { index: 0, count: 1 },
+  nextExercise: null,
 };
 
 /** Rend la page à l'URL donnée. */
@@ -132,7 +135,7 @@ describe('PracticePage', () => {
   it('joue une session complète puis affiche le résumé (F-32)', async () => {
     renderPage();
     const input = await screen.findByLabelText('Zone de frappe');
-    expect(api.startSession).toHaveBeenCalledWith('t1');
+    expect(api.startSession).toHaveBeenCalledWith('t1', null);
     expect(screen.getByLabelText('Statistiques en direct')).toBeInTheDocument();
 
     // « x » à la place de « e », puis le reste juste jusqu'à la fin du texte.
@@ -185,7 +188,7 @@ describe('PracticePage', () => {
     renderPage();
     await screen.findByLabelText('Zone de frappe');
     fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true });
-    await waitFor(() => expect(api.startSession).toHaveBeenLastCalledWith('t2'));
+    await waitFor(() => expect(api.startSession).toHaveBeenLastCalledWith('t2', null));
     expect(api.nextTextId).toHaveBeenCalledWith('t1');
   });
 
@@ -266,7 +269,37 @@ describe('PracticePage', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Recommencer à zéro' }));
     await screen.findByLabelText('Zone de frappe');
     expect(api.abandonSession).toHaveBeenCalledWith('s0');
-    expect(api.startSession).toHaveBeenCalledWith('t1');
+    expect(api.startSession).toHaveBeenCalledWith('t1', null);
+  });
+
+  it('joue l’exercice demandé par l’URL puis enchaîne sur le suivant (F-24)', async () => {
+    // Chaque démarrage crée une session distincte, comme le vrai backend.
+    let started = 0;
+    api.startSession.mockImplementation((_id: string, exercise: number | null) =>
+      ok(
+        sessionStart({
+          sessionId: `s${++started}`,
+          exercise: { index: exercise ?? 0, count: 3 },
+        }),
+      ),
+    );
+    api.finishSession.mockReturnValue(
+      ok({ ...summary, exercise: { index: 1, count: 3 }, nextExercise: 2 }),
+    );
+    // `exercise=2` dans l'URL : deuxième exercice (rang 1).
+    renderPage('/practice?text=t1&exercise=2');
+    await screen.findByLabelText('Zone de frappe');
+    expect(api.startSession).toHaveBeenCalledWith('t1', 1);
+    expect(screen.getByText('Copie · Exercice 2 sur 3')).toBeInTheDocument();
+    // Ctrl+R recommence le même exercice.
+    fireEvent.keyDown(window, { key: 'r', ctrlKey: true });
+    await waitFor(() => expect(api.startSession).toHaveBeenLastCalledWith('t1', 1));
+    // Exercice fini : le bouton de l'écran de fin passe au suivant.
+    type(await screen.findByLabelText('Zone de frappe'), 'le chat');
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Exercice suivant (3 sur 3)' }),
+    );
+    await waitFor(() => expect(api.startSession).toHaveBeenLastCalledWith('t1', 2));
   });
 
   it('renvoie vers la bibliothèque quand il n’y a aucun texte', async () => {

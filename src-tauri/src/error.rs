@@ -19,6 +19,15 @@ pub enum AppError {
     Invalid(String),
 }
 
+/// Une source de texte refusée (texte vide, PDF scanné, plage impossible) est une
+/// donnée invalide, avec son message lisible.
+impl From<dactylo_core::source::SourceError> for AppError {
+    /// Reprend le message de la source.
+    fn from(error: dactylo_core::source::SourceError) -> Self {
+        AppError::Invalid(error.to_string())
+    }
+}
+
 impl AppError {
     /// Code stable correspondant à la variante.
     fn code(&self) -> ErrorCode {

@@ -1,6 +1,6 @@
 /** Page d'accueil. */
 
-import { ClipboardPaste, Keyboard } from 'lucide-react';
+import { ClipboardPaste, FileText, Keyboard } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
@@ -63,10 +63,17 @@ export default function HomePage() {
             {profile ? t('greeting', { name: profile.name }) : t('greetingAnonymous')}
           </h1>
         </div>
-        <Link to="/library" className={buttonVariants({ variant: 'outline' })}>
-          <ClipboardPaste aria-hidden className="size-4" />
-          {t('pasteText')}
-        </Link>
+        {/* Raccourcis vers les deux manières d'ajouter un texte. */}
+        <div className="flex flex-wrap gap-3">
+          <Link to="/library?view=paste" className={buttonVariants({ variant: 'outline' })}>
+            <ClipboardPaste aria-hidden className="size-4" />
+            {t('pasteText')}
+          </Link>
+          <Link to="/library?view=pdf" className={buttonVariants({ variant: 'outline' })}>
+            <FileText aria-hidden className="size-4" />
+            {t('importPdf')}
+          </Link>
+        </div>
       </header>
 
       {error && (
@@ -84,7 +91,18 @@ export default function HomePage() {
               <Keyboard aria-hidden className="size-4" />
               {t('resumeEyebrow')}
             </Eyebrow>
-            <h2 className="text-xl font-bold">{pending.title}</h2>
+            <div>
+              <h2 className="text-xl font-bold">{pending.title}</h2>
+              {/* Exercice interrompu, pour un texte découpé (F-24). */}
+              {pending.exercise.count > 1 && (
+                <p className="text-sm text-muted-foreground">
+                  {t('exercise', {
+                    current: pending.exercise.index + 1,
+                    count: pending.exercise.count,
+                  })}
+                </p>
+              )}
+            </div>
             <div className="mt-auto flex flex-col gap-2">
               <p className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{t('progress')}</span>

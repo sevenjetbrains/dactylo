@@ -5,7 +5,7 @@ use dactylo_core::typing::{CorrectionMode, ErrorType, KeyKind};
 
 use super::*;
 use crate::commands::library;
-use crate::db::texts::NewText;
+use crate::commands::library::NewText;
 use crate::test_support;
 
 /// Ajoute un texte à la bibliothèque et renvoie son identifiant.
@@ -15,8 +15,8 @@ async fn add_text(state: &AppState, content: &str) -> String {
         NewText {
             title: "Texte".into(),
             content: content.into(),
-            tags: vec![],
             language: "fr".into(),
+            ..NewText::default()
         },
     )
     .await
@@ -63,7 +63,7 @@ async fn complete_session_is_saved_with_stats_errors_and_events() {
     let text_id = add_text(&state, "la forêt").await;
 
     // Le démarrage renvoie le texte découpé et aucune frappe.
-    let start = start(&state, Some(text_id.clone())).await.unwrap();
+    let start = start(&state, Some(text_id.clone()), None).await.unwrap();
     assert_eq!(start.graphemes.len(), 8);
     assert_eq!(start.words.len(), 2);
     assert!(start.keystrokes.is_empty());
@@ -120,7 +120,7 @@ async fn second_session_is_compared_with_the_first() {
     let (state, _) = test_support::state().await;
     let text_id = add_text(&state, "ab").await;
     for _ in 0..2 {
-        let s = start(&state, Some(text_id.clone())).await.unwrap();
+        let s = start(&state, Some(text_id.clone()), None).await.unwrap();
         record(&state, &s.session_id, &keys(0, &["a", "b"]))
             .await
             .unwrap();
@@ -138,7 +138,7 @@ async fn second_session_is_compared_with_the_first() {
 async fn batches_are_idempotent_even_after_losing_the_cache() {
     let (state, _) = test_support::state().await;
     let text_id = add_text(&state, "chat").await;
-    let s = start(&state, Some(text_id)).await.unwrap();
+    let s = start(&state, Some(text_id), None).await.unwrap();
 
     record(&state, &s.session_id, &keys(0, &["c", "x"]))
         .await
@@ -165,7 +165,7 @@ async fn interrupted_session_is_offered_for_resumption() {
 
     // Une frappe sur quatre caractères.
     let text_id = add_text(&state, "abcd").await;
-    let s = start(&state, Some(text_id)).await.unwrap();
+    let s = start(&state, Some(text_id), None).await.unwrap();
     record(&state, &s.session_id, &keys(0, &["a"]))
         .await
         .unwrap();
@@ -199,7 +199,7 @@ async fn interrupted_session_is_offered_for_resumption() {
 async fn session_without_keystrokes_is_not_offered() {
     let (state, _) = test_support::state().await;
     let text_id = add_text(&state, "ab").await;
-    let s = start(&state, Some(text_id)).await.unwrap();
+    let s = start(&state, Some(text_id), None).await.unwrap();
     assert!(pending(&state).await.unwrap().is_none());
     assert!(matches!(
         sessions::get(&state.pool, &s.session_id).await,
@@ -212,7 +212,7 @@ async fn session_without_keystrokes_is_not_offered() {
 async fn abandoned_session_is_deleted() {
     let (state, _) = test_support::state().await;
     let text_id = add_text(&state, "ab").await;
-    let s = start(&state, Some(text_id)).await.unwrap();
+    let s = start(&state, Some(text_id), None).await.unwrap();
     abandon(&state, &s.session_id).await.unwrap();
     assert!(pending(&state).await.unwrap().is_none());
     assert!(matches!(
@@ -226,13 +226,13 @@ async fn abandoned_session_is_deleted() {
 async fn start_without_id_uses_the_latest_text() {
     let (state, _) = test_support::state().await;
     assert!(matches!(
-        start(&state, None).await,
+        start(&state, None, None).await,
         Err(AppError::NotFound(_))
     ));
     // Bibliothèque vide : erreur ; puis deux textes, le dernier est choisi.
     add_text(&state, "ancien").await;
     let latest = add_text(&state, "récent").await;
-    assert_eq!(start(&state, None).await.unwrap().text_id, latest);
+    assert_eq!(start(&state, None, None).await.unwrap().text_id, latest);
 }
 
 /// Les réglages sont bornés à l'enregistrement et figés pour la session.
@@ -256,7 +256,7 @@ async fn settings_are_sanitized_and_frozen_for_the_session() {
 
     // La session démarre avec le mode bloquant.
     let text_id = add_text(&state, "ab").await;
-    let s = start(&state, Some(text_id)).await.unwrap();
+    let s = start(&state, Some(text_id), None).await.unwrap();
     assert_eq!(s.settings.correction, CorrectionMode::Blocking);
 
     // Changer les réglages en cours de session ne change pas ses règles.
@@ -289,7 +289,7 @@ async fn timed_session_duration_is_capped() {
     .await
     .unwrap();
     let text_id = add_text(&state, "ab").await;
-    let s = start(&state, Some(text_id)).await.unwrap();
+    let s = start(&state, Some(text_id), None).await.unwrap();
     let summary = finish(&state, &s.session_id, 61_250).await.unwrap();
     assert_eq!(summary.stats.duration_ms, 60_000);
 }
@@ -299,8 +299,97 @@ async fn timed_session_duration_is_capped() {
 async fn wrap_text_returns_line_starts() {
     let (state, _) = test_support::state().await;
     let text_id = add_text(&state, "le chat dort").await;
-    let s = start(&state, Some(text_id)).await.unwrap();
+    let s = start(&state, Some(text_id), None).await.unwrap();
     assert_eq!(line_starts(&state, &s.session_id, 8).await.unwrap(), [0, 8]);
     state.take_live(&s.session_id);
     assert_eq!(line_starts(&state, &s.session_id, 100).await.unwrap(), [0]);
+}
+
+/// Ajoute un texte découpé en exercices d'une ligne et renvoie son identifiant.
+async fn add_lines(state: &AppState, content: &str) -> String {
+    library::create(
+        state,
+        NewText {
+            title: "Exercices".into(),
+            content: content.into(),
+            language: "fr".into(),
+            segmentation: dactylo_core::exercise::Segmentation::Lines { count: 1 },
+            ..NewText::default()
+        },
+    )
+    .await
+    .unwrap()
+    .id
+}
+
+/// Une session porte sur un exercice ; le finir fait passer au suivant (F-24).
+#[tokio::test]
+async fn exercises_are_played_in_order() {
+    let (state, _) = test_support::state().await;
+    let text_id = add_lines(&state, "ab\ncd\nef").await;
+    // Premier exercice : seule la première ligne est à taper.
+    let s = start(&state, Some(text_id.clone()), None).await.unwrap();
+    assert_eq!(s.graphemes, ["a", "b"]);
+    assert_eq!(s.exercise, ExerciseInfo { index: 0, count: 3 });
+    record(&state, &s.session_id, &keys(0, &["a", "b"]))
+        .await
+        .unwrap();
+    let summary = finish(&state, &s.session_id, 400).await.unwrap();
+    assert_eq!(summary.next_exercise, Some(1));
+    // Sans exercice précisé, la session suivante prend la deuxième ligne.
+    let s = start(&state, Some(text_id.clone()), None).await.unwrap();
+    assert_eq!(s.graphemes, ["c", "d"]);
+    assert_eq!(s.exercise.index, 1);
+    let library = library::list(&state, &Default::default()).await.unwrap();
+    assert_eq!((library[0].completed, library[0].next_exercise), (1, 1));
+    // Un exercice précis peut être choisi ; le dernier n'a pas de suivant.
+    let s = start(&state, Some(text_id.clone()), Some(2)).await.unwrap();
+    record(&state, &s.session_id, &keys(0, &["e", "f"]))
+        .await
+        .unwrap();
+    let summary = finish(&state, &s.session_id, 400).await.unwrap();
+    assert_eq!(summary.next_exercise, None);
+    // Un exercice inexistant est refusé.
+    assert!(matches!(
+        start(&state, Some(text_id), Some(3)).await,
+        Err(AppError::Invalid(_))
+    ));
+}
+
+/// Un exercice abandonné en cours de route (session chronométrée) ne compte pas.
+#[tokio::test]
+async fn unfinished_exercise_does_not_advance() {
+    let (state, _) = test_support::state().await;
+    let text_id = add_lines(&state, "abc\ndef").await;
+    let s = start(&state, Some(text_id.clone()), None).await.unwrap();
+    record(&state, &s.session_id, &keys(0, &["a"]))
+        .await
+        .unwrap();
+    finish(&state, &s.session_id, 60_000).await.unwrap();
+    assert_eq!(
+        start(&state, Some(text_id), None)
+            .await
+            .unwrap()
+            .exercise
+            .index,
+        0
+    );
+}
+
+/// Après un redémarrage, la session est reconstruite sur le même exercice.
+#[tokio::test]
+async fn resumed_session_keeps_its_exercise() {
+    let (state, _) = test_support::state().await;
+    let text_id = add_lines(&state, "ab\ncd").await;
+    let s = start(&state, Some(text_id), Some(1)).await.unwrap();
+    record(&state, &s.session_id, &keys(0, &["c"]))
+        .await
+        .unwrap();
+    // Cache perdu : reconstruction depuis la base.
+    state.take_live(&s.session_id);
+    let offer = pending(&state).await.unwrap().unwrap();
+    assert_eq!(offer.exercise, ExerciseInfo { index: 1, count: 2 });
+    assert_eq!(offer.progress, 0.5);
+    let resumed = resume(&state, &s.session_id).await.unwrap();
+    assert_eq!(resumed.graphemes, ["c", "d"]);
 }

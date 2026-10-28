@@ -10,5 +10,7 @@
   "resumeEyebrow": "Resume copying",
   "progress": "Progress",
   "continue": "Continue",
-  "startEyebrow": "Copy"
+  "startEyebrow": "Copy",
+  "exercise": "Exercise {{current}} of {{count}}",
+  "importPdf": "Import a PDF"
 }
