@@ -103,3 +103,22 @@ test('travailler depuis le menu Copie puis S’entraîner sur le même texte rep
   await page.getByRole('link', { name: 'Copie' }).click();
   await expect(page.getByText('Session interrompue')).toBeVisible();
 });
+
+test('les frappes d’une session abandonnée aussitôt sont gardées (F-31)', async ({ page }) => {
+  await pasteText(page, 'Premier', 'le premier texte');
+  await pasteText(page, 'Second', 'le second texte');
+  // Frappes puis changement de texte immédiat, avant l'envoi automatique (2 s).
+  await page.getByRole('link', { name: "S'entraîner sur « Premier »" }).click();
+  await expect(page.getByLabel('Zone de frappe')).toBeFocused();
+  await page.keyboard.type('le pr');
+  await page.getByRole('link', { name: 'Bibliothèque' }).click();
+  await page.getByRole('link', { name: "S'entraîner sur « Second »" }).click();
+  await expect(page.getByRole('heading', { name: 'Second' })).toBeVisible();
+  // Les cinq frappes sont arrivées au backend avant le démarrage du second texte.
+  const kept = await page.evaluate(() =>
+    (
+      window as unknown as { __TAURI_INTERNALS__: { sent: () => number } }
+    ).__TAURI_INTERNALS__.sent(),
+  );
+  expect(kept).toBe(5);
+});

@@ -23,7 +23,7 @@ import { SessionToolbar } from './SessionToolbar';
 import { activeMs, usePracticeStore } from './store';
 import { FALLBACK_COLUMNS } from './layout';
 import { TypingArea } from './TypingArea';
-import { useKeystrokeSync } from './use-keystroke-sync';
+import { useKeystrokeSync, waitForSync } from './use-keystroke-sync';
 
 /** Ce que la page affiche : chargement, offre de reprise, bibliothèque vide, erreur, frappe ou résumé. */
 type Phase =
@@ -85,6 +85,8 @@ export default function PracticePage() {
     setPhase({ kind: 'loading' });
     setLineStarts(null);
     try {
+      // Les frappes de la session précédente partent avant qu'elle soit abandonnée.
+      await waitForSync();
       const start = await unwrap(commands.startSession(textId, exercise));
       if (token !== request.current) return;
       usePracticeStore.getState().load(start);
@@ -184,18 +186,20 @@ export default function PracticePage() {
    * file sont prises tout de suite : l'abandon ne peut viser que cette session.
    */
   const dropCurrent = useCallback(() => {
-    const { session: current, status: currentStatus, takeBatch } = usePracticeStore.getState();
+    const { session: current, status: currentStatus } = usePracticeStore.getState();
     if (!current) return null;
     // Nouveau jeton : les réponses des actions précédentes deviennent caduques.
     const token = ++request.current;
     let dropped: Promise<unknown> = Promise.resolve();
-    // Une session terminée est déjà enregistrée : on ne la supprime pas.
+    // Une session terminée est déjà enregistrée ; sinon, ses frappes en attente sont
+    // envoyées avant l'abandon, qui la garde avec elles (F-31, ADR 0014).
     if (currentStatus !== 'done') {
-      takeBatch();
-      dropped = unwrap(commands.abandonSession(current.sessionId)).catch(() => undefined);
+      dropped = flush()
+        .then(() => unwrap(commands.abandonSession(current.sessionId)))
+        .catch(() => undefined);
     }
     return { textId: current.textId, exercise: current.exercise.index, token, dropped };
-  }, []);
+  }, [flush]);
 
   /** Recommence le même exercice (Ctrl+R) après abandon de la session en cours. */
   const restart = useCallback(async () => {

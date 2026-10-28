@@ -181,6 +181,12 @@ describe('PracticePage', () => {
     expect(event.defaultPrevented).toBe(true);
     await waitFor(() => expect(api.startSession).toHaveBeenCalledTimes(2));
     expect(api.abandonSession).toHaveBeenCalledWith('s1');
+    // Les frappes pas encore envoyées partent avant l'abandon : rien n'est perdu (F-31).
+    const sent = api.recordKeystrokes.mock.calls.flatMap(([, keys]) => keys as { typed: string }[]);
+    expect(sent.map((k) => k.typed).join('')).toBe('le');
+    expect(api.recordKeystrokes.mock.invocationCallOrder[0]).toBeLessThan(
+      api.abandonSession.mock.invocationCallOrder[0] ?? 0,
+    );
     await waitFor(() => expect(usePracticeStore.getState().engine?.position).toBe(0));
   });
 

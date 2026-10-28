@@ -1,6 +1,6 @@
 /** Envoi périodique des frappes au backend. */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 
 import { commands, unwrap } from '@/shared/api';
 
@@ -8,6 +8,21 @@ import { usePracticeStore } from './store';
 
 /** Intervalle d'envoi des frappes (§3.2) ; bien en deçà des 10 s de NF-06. */
 export const SYNC_INTERVAL_MS = 2_000;
+
+/**
+ * Chaîne des envois, commune à toute la page : chaque envoi attend la fin du
+ * précédent, même d'une page Copie démontée entre-temps (navigation).
+ */
+let chain: Promise<void> = Promise.resolve();
+
+/**
+ * Attend la fin des envois en cours. À appeler avant de démarrer une session : le
+ * démarrage abandonne la précédente, dont les dernières frappes doivent être arrivées
+ * (F-31, ADR 0014).
+ */
+export function waitForSync(): Promise<void> {
+  return chain;
+}
 
 /**
  * Envoie les frappes en attente toutes les 2 s. `flush` force un envoi
@@ -18,11 +33,8 @@ export const SYNC_INTERVAL_MS = 2_000;
  * parte, ce qui garde l'ordre des frappes côté backend.
  */
 export function useKeystrokeSync(sessionId: string | null) {
-  // Chaîne des envois : chaque envoi attend la fin du précédent.
-  const inflight = useRef<Promise<void>>(Promise.resolve());
-
   const flush = useCallback(() => {
-    inflight.current = inflight.current.then(async () => {
+    chain = chain.then(async () => {
       const store = usePracticeStore.getState();
       // La file appartient à la session chargée : ne rien envoyer pour une autre.
       if (!sessionId || store.session?.sessionId !== sessionId) return;
@@ -38,7 +50,7 @@ export function useKeystrokeSync(sessionId: string | null) {
         }
       }
     });
-    return inflight.current;
+    return chain;
   }, [sessionId]);
 
   // Envoi automatique à intervalle régulier, arrêté au démontage.

@@ -31,7 +31,10 @@ export async function installFakeBackend(page: Page) {
     const split = (s: string) => Array.from(segmenter.segment(s), (x) => x.segment);
     // « Base » en mémoire : textes, sessions et réglages par défaut.
     const texts: Text[] = [];
-    /** Sessions par identifiant, dans l'ordre de création ; `done` une fois terminées. */
+    /**
+     * Sessions par identifiant, dans l'ordre de création ; `done` une fois terminées,
+     * `abandoned` une fois abandonnées avec leurs frappes (ADR 0014).
+     */
     const sessions = new Map<
       string,
       {
@@ -41,8 +44,17 @@ export async function installFakeBackend(page: Page) {
         exercise: { index: number; count: number };
         text: string;
         done: boolean;
+        abandoned: boolean;
       }
     >();
+
+    /** Abandonne une session en cours : supprimée sans frappe, gardée sinon (ADR 0014). */
+    const abandon = (id: string) => {
+      const s = sessions.get(id);
+      if (!s || s.done || s.abandoned) return;
+      if (s.keys.length === 0) sessions.delete(id);
+      else s.abandoned = true;
+    };
     const settings = {
       fontSize: 20,
       visibleLines: 3,
@@ -118,7 +130,7 @@ export async function installFakeBackend(page: Page) {
       // Comme le vrai backend (NF-06) : dernière session non terminée ; sans frappe,
       // elle est supprimée et rien n'est proposé.
       pending_session: () => {
-        const entry = [...sessions].reverse().find(([, s]) => !s.done);
+        const entry = [...sessions].reverse().find(([, s]) => !s.done && !s.abandoned);
         if (!entry) return null;
         const [sessionId, s] = entry;
         if (s.keys.length === 0) {
@@ -215,8 +227,8 @@ export async function installFakeBackend(page: Page) {
         const index =
           (a.exercise as number | null) ?? (text.completed >= all.length ? 0 : text.completed);
         const content = all[index] ?? '';
-        // Une seule session en cours par profil : celles non terminées sont supprimées.
-        for (const [id, s] of sessions) if (!s.done) sessions.delete(id);
+        // Une seule session en cours par profil : les autres sont abandonnées.
+        for (const id of [...sessions.keys()]) abandon(id);
         const sessionId = `s${++counter}`;
         const exercise = { index, count: all.length };
         sessions.set(sessionId, {
@@ -226,6 +238,7 @@ export async function installFakeBackend(page: Page) {
           exercise,
           text: content,
           done: false,
+          abandoned: false,
         });
         const graphemes = split(content);
         // Mots : suites de lettres ou chiffres (version simplifiée de `word_spans`).
@@ -252,7 +265,12 @@ export async function installFakeBackend(page: Page) {
       wrap_text: () => [0],
       record_keystrokes: (a) => {
         const keys = a.keystrokes as Key[];
-        sessions.get(a.sessionId as string)?.keys.push(...keys);
+        // Comme le vrai backend : une session terminée ou abandonnée refuse les frappes.
+        const target = sessions.get(a.sessionId as string);
+        if (!target || target.done || target.abandoned) {
+          throw { code: 'invalid', message: 'session terminée ou abandonnée' };
+        }
+        target.keys.push(...keys);
         return keys.at(-1)?.seq ?? null;
       },
       finish_session: (a) => {
@@ -293,7 +311,7 @@ export async function installFakeBackend(page: Page) {
         };
       },
       abandon_session: (a) => {
-        sessions.delete(a.sessionId as string);
+        abandon(a.sessionId as string);
         return null;
       },
       next_text_id: () => null,
@@ -308,6 +326,8 @@ export async function installFakeBackend(page: Page) {
           return handler(args);
         },
         transformCallback: () => 0,
+        // Pour les tests : frappes reçues par toutes les sessions, terminées ou non.
+        sent: () => [...sessions.values()].reduce((n, s) => n + s.keys.length, 0),
       },
     });
   });
