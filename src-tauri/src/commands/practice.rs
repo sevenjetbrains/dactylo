@@ -203,6 +203,11 @@ pub async fn pending(state: &AppState) -> AppResult<Option<PendingSession>> {
         return Ok(None);
     };
     let live = take_live(state, &row.id).await?;
+    // Une session ouverte sans aucune frappe n'a rien à reprendre.
+    if live.typing.last_seq().is_none() {
+        sessions::delete(&state.pool, &row.id).await?;
+        return Ok(None);
+    }
     let title = match &row.text_id {
         Some(id) => texts::get(&state.pool, id).await?.title,
         None => String::new(),

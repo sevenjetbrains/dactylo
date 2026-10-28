@@ -2,6 +2,11 @@
   "menu": "Home",
   "welcome": "Welcome",
   "welcomeName": "Welcome, {{name}}",
-  "emptyTitle": "Nothing to do yet",
-  "emptyBody": "Typing exercises, the library and reviews will show up here."
+  "resumeTitle": "Resume your session",
+  "resumeBody": "Your session on “{{title}}” stopped at {{progress}}%.",
+  "resumeAction": "Resume",
+  "startTitle": "Practice",
+  "startBody": "Copy the latest text you added, or pick one from the library.",
+  "startPractice": "Start",
+  "openLibrary": "Open the library"
 }

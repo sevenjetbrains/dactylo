@@ -1,0 +1,22 @@
+{
+  "menu": "Bibliothèque",
+  "title": "Bibliothèque",
+  "paste": {
+    "title": "Ajouter un texte",
+    "textTitle": "Titre",
+    "content": "Texte (collez-le ici)",
+    "tags": "Étiquettes",
+    "tagsHint": "Séparées par des virgules, ex. : conte, Maupassant",
+    "language": "Langue",
+    "submit": "Enregistrer",
+    "saved": "« {{title}} » a été ajouté."
+  },
+  "languages": { "fr": "Français", "en": "Anglais" },
+  "list": {
+    "title": "Mes textes",
+    "empty": "La bibliothèque est vide.",
+    "meta": "{{length}} caractères · ajouté le {{date}}",
+    "practice": "S'entraîner",
+    "practiceLabel": "S'entraîner sur « {{title}} »"
+  }
+}

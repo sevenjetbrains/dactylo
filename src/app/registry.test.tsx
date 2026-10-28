@@ -12,7 +12,10 @@ import { buildRoutes } from './router';
 import type { ModuleManifest } from './types';
 
 vi.mock('@/shared/api', () => ({
-  commands: { currentProfile: vi.fn(() => new Promise(() => {})) },
+  commands: {
+    currentProfile: vi.fn(() => new Promise(() => {})),
+    pendingSession: vi.fn(() => new Promise(() => {})),
+  },
   unwrap: (p: Promise<unknown>) => p,
 }));
 
@@ -34,7 +37,13 @@ describe('registre de modules', () => {
 
   it('trie le menu par ordre déclaré', () => {
     const menu = buildMenu([...modules, hello]);
-    expect(menu.map((e) => e.moduleId)).toEqual(['home', 'hello', 'settings']);
+    expect(menu.map((e) => e.moduleId)).toEqual([
+      'home',
+      'library',
+      'practice',
+      'hello',
+      'settings',
+    ]);
     expect(menu[0]?.path).toBe('/');
   });
 

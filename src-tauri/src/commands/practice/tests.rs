@@ -175,6 +175,18 @@ async fn interrupted_session_is_offered_for_resumption() {
 }
 
 #[tokio::test]
+async fn session_without_keystrokes_is_not_offered() {
+    let (state, _) = test_support::state().await;
+    let text_id = add_text(&state, "ab").await;
+    let s = start(&state, Some(text_id)).await.unwrap();
+    assert!(pending(&state).await.unwrap().is_none());
+    assert!(matches!(
+        sessions::get(&state.pool, &s.session_id).await,
+        Err(AppError::NotFound(_))
+    ));
+}
+
+#[tokio::test]
 async fn abandoned_session_is_deleted() {
     let (state, _) = test_support::state().await;
     let text_id = add_text(&state, "ab").await;

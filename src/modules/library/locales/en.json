@@ -1,0 +1,22 @@
+{
+  "menu": "Library",
+  "title": "Library",
+  "paste": {
+    "title": "Add a text",
+    "textTitle": "Title",
+    "content": "Text (paste it here)",
+    "tags": "Tags",
+    "tagsHint": "Comma-separated, e.g. tale, Maupassant",
+    "language": "Language",
+    "submit": "Save",
+    "saved": "“{{title}}” was added."
+  },
+  "languages": { "fr": "French", "en": "English" },
+  "list": {
+    "title": "My texts",
+    "empty": "The library is empty.",
+    "meta": "{{length}} characters · added on {{date}}",
+    "practice": "Practice",
+    "practiceLabel": "Practice on “{{title}}”"
+  }
+}

@@ -1,19 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-// Simule le pont IPC de Tauri : le webview n'est pas disponible dans un navigateur.
+import { installFakeBackend } from './fake-backend';
+
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    const responses: Record<string, unknown> = {
-      app_info: { name: 'Dactylo', version: '0.1.0' },
-      current_profile: { id: 'p1', name: 'Par défaut', keyboardLayout: 'azerty', createdAt: 0 },
-    };
-    Object.assign(window, {
-      __TAURI_INTERNALS__: {
-        invoke: async (cmd: string) => responses[cmd],
-        transformCallback: () => 0,
-      },
-    });
-  });
+  await installFakeBackend(page);
 });
 
 test("l'accueil s'ouvre et salue le profil par défaut", async ({ page }) => {

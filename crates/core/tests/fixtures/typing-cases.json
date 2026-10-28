@@ -6,147 +6,315 @@
       "text": "chat",
       "rules": { "correction": "free", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["c", "h", "a", "t"],
-      "expected": { "position": 4, "cells": "cccc", "inserts": 4, "correctInserts": 4, "correctCells": 4, "uncorrected": 0, "rejected": 0 }
+      "expected": {
+        "position": 4,
+        "cells": "cccc",
+        "inserts": 4,
+        "correctInserts": 4,
+        "correctCells": 4,
+        "uncorrected": 0,
+        "rejected": 0
+      }
     },
     {
       "name": "libre — l'erreur reste et on avance",
       "text": "chat",
       "rules": { "correction": "free", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["c", "x", "a", "t"],
-      "expected": { "position": 4, "cells": "cxcc", "inserts": 4, "correctInserts": 3, "correctCells": 3, "uncorrected": 1, "rejected": 0 }
+      "expected": {
+        "position": 4,
+        "cells": "cxcc",
+        "inserts": 4,
+        "correctInserts": 3,
+        "correctCells": 3,
+        "uncorrected": 1,
+        "rejected": 0
+      }
     },
     {
       "name": "libre — erreur corrigée par retour arrière",
       "text": "chat",
       "rules": { "correction": "free", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["c", "x", "⌫", "h", "a"],
-      "expected": { "position": 3, "cells": "cfc.", "inserts": 4, "correctInserts": 3, "correctCells": 3, "uncorrected": 0, "rejected": 0 }
+      "expected": {
+        "position": 3,
+        "cells": "cfc.",
+        "inserts": 4,
+        "correctInserts": 3,
+        "correctCells": 3,
+        "uncorrected": 0,
+        "rejected": 0
+      }
     },
     {
       "name": "libre — retour arrière interdit",
       "text": "chat",
       "rules": { "correction": "free", "backspaceAllowed": false, "lenientPunctuation": true },
       "keys": ["c", "x", "⌫", "a"],
-      "expected": { "position": 3, "cells": "cxc.", "inserts": 3, "correctInserts": 2, "correctCells": 2, "uncorrected": 1, "rejected": 1 }
+      "expected": {
+        "position": 3,
+        "cells": "cxc.",
+        "inserts": 3,
+        "correctInserts": 2,
+        "correctCells": 2,
+        "uncorrected": 1,
+        "rejected": 1
+      }
     },
     {
       "name": "libre — retour arrière au début refusé",
       "text": "ab",
       "rules": { "correction": "free", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["⌫", "a"],
-      "expected": { "position": 1, "cells": "c.", "inserts": 1, "correctInserts": 1, "correctCells": 1, "uncorrected": 0, "rejected": 1 }
+      "expected": {
+        "position": 1,
+        "cells": "c.",
+        "inserts": 1,
+        "correctInserts": 1,
+        "correctCells": 1,
+        "uncorrected": 0,
+        "rejected": 1
+      }
     },
     {
       "name": "libre — retour sur un caractère juste puis refrappe",
       "text": "ab",
       "rules": { "correction": "free", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["a", "⌫", "a", "b"],
-      "expected": { "position": 2, "cells": "cc", "inserts": 3, "correctInserts": 3, "correctCells": 2, "uncorrected": 0, "rejected": 0 }
+      "expected": {
+        "position": 2,
+        "cells": "cc",
+        "inserts": 3,
+        "correctInserts": 3,
+        "correctCells": 2,
+        "uncorrected": 0,
+        "rejected": 0
+      }
     },
     {
       "name": "frappe après la fin du texte refusée",
       "text": "ab",
       "rules": { "correction": "free", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["a", "b", "c"],
-      "expected": { "position": 2, "cells": "cc", "inserts": 2, "correctInserts": 2, "correctCells": 2, "uncorrected": 0, "rejected": 1 }
+      "expected": {
+        "position": 2,
+        "cells": "cc",
+        "inserts": 2,
+        "correctInserts": 2,
+        "correctCells": 2,
+        "uncorrected": 0,
+        "rejected": 1
+      }
     },
     {
       "name": "bloquant — l'erreur n'avance pas",
       "text": "chat",
       "rules": { "correction": "blocking", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["c", "x", "h"],
-      "expected": { "position": 2, "cells": "cf..", "inserts": 3, "correctInserts": 2, "correctCells": 2, "uncorrected": 0, "rejected": 0 }
+      "expected": {
+        "position": 2,
+        "cells": "cf..",
+        "inserts": 3,
+        "correctInserts": 2,
+        "correctCells": 2,
+        "uncorrected": 0,
+        "rejected": 0
+      }
     },
     {
       "name": "bloquant — erreur sous le curseur",
       "text": "chat",
       "rules": { "correction": "blocking", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["c", "x", "y"],
-      "expected": { "position": 1, "cells": "cx..", "inserts": 3, "correctInserts": 1, "correctCells": 1, "uncorrected": 1, "rejected": 0 }
+      "expected": {
+        "position": 1,
+        "cells": "cx..",
+        "inserts": 3,
+        "correctInserts": 1,
+        "correctCells": 1,
+        "uncorrected": 1,
+        "rejected": 0
+      }
     },
     {
       "name": "bloquant — le retour arrière efface l'erreur sous le curseur",
       "text": "chat",
       "rules": { "correction": "blocking", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["c", "x", "⌫", "h"],
-      "expected": { "position": 2, "cells": "cf..", "inserts": 3, "correctInserts": 2, "correctCells": 2, "uncorrected": 0, "rejected": 0 }
+      "expected": {
+        "position": 2,
+        "cells": "cf..",
+        "inserts": 3,
+        "correctInserts": 2,
+        "correctCells": 2,
+        "uncorrected": 0,
+        "rejected": 0
+      }
     },
     {
       "name": "bloquant — retour arrière sur un caractère juste",
       "text": "chat",
       "rules": { "correction": "blocking", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["c", "h", "⌫"],
-      "expected": { "position": 1, "cells": "c...", "inserts": 2, "correctInserts": 2, "correctCells": 1, "uncorrected": 0, "rejected": 0 }
+      "expected": {
+        "position": 1,
+        "cells": "c...",
+        "inserts": 2,
+        "correctInserts": 2,
+        "correctCells": 1,
+        "uncorrected": 0,
+        "rejected": 0
+      }
     },
     {
       "name": "touche morte — ê précomposé compte pour un caractère",
       "text": "forêt",
       "rules": { "correction": "free", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["f", "o", "r", "ê", "t"],
-      "expected": { "position": 5, "cells": "ccccc", "inserts": 5, "correctInserts": 5, "correctCells": 5, "uncorrected": 0, "rejected": 0 }
+      "expected": {
+        "position": 5,
+        "cells": "ccccc",
+        "inserts": 5,
+        "correctInserts": 5,
+        "correctCells": 5,
+        "uncorrected": 0,
+        "rejected": 0
+      }
     },
     {
       "name": "texte collé en NFD et frappe en NFD",
       "text": "forêt",
       "rules": { "correction": "free", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["f", "o", "r", "ê", "t"],
-      "expected": { "position": 5, "cells": "ccccc", "inserts": 5, "correctInserts": 5, "correctCells": 5, "uncorrected": 0, "rejected": 0 }
+      "expected": {
+        "position": 5,
+        "cells": "ccccc",
+        "inserts": 5,
+        "correctInserts": 5,
+        "correctCells": 5,
+        "uncorrected": 0,
+        "rejected": 0
+      }
     },
     {
       "name": "accent oublié",
       "text": "forêt",
       "rules": { "correction": "free", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["f", "o", "r", "e", "t"],
-      "expected": { "position": 5, "cells": "cccxc", "inserts": 5, "correctInserts": 4, "correctCells": 4, "uncorrected": 1, "rejected": 0 }
+      "expected": {
+        "position": 5,
+        "cells": "cccxc",
+        "inserts": 5,
+        "correctInserts": 4,
+        "correctCells": 4,
+        "uncorrected": 1,
+        "rejected": 0
+      }
     },
     {
       "name": "frappe de plusieurs graphèmes d'un coup refusée",
       "text": "ab",
       "rules": { "correction": "free", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["ab"],
-      "expected": { "position": 0, "cells": "..", "inserts": 0, "correctInserts": 0, "correctCells": 0, "uncorrected": 0, "rejected": 1 }
+      "expected": {
+        "position": 0,
+        "cells": "..",
+        "inserts": 0,
+        "correctInserts": 0,
+        "correctCells": 0,
+        "uncorrected": 0,
+        "rejected": 1
+      }
     },
     {
       "name": "apostrophe courbe tapée droite (souple)",
       "text": "l’an",
       "rules": { "correction": "free", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["l", "'", "a", "n"],
-      "expected": { "position": 4, "cells": "cccc", "inserts": 4, "correctInserts": 4, "correctCells": 4, "uncorrected": 0, "rejected": 0 }
+      "expected": {
+        "position": 4,
+        "cells": "cccc",
+        "inserts": 4,
+        "correctInserts": 4,
+        "correctCells": 4,
+        "uncorrected": 0,
+        "rejected": 0
+      }
     },
     {
       "name": "apostrophe courbe tapée droite (strict)",
       "text": "l’an",
       "rules": { "correction": "free", "backspaceAllowed": true, "lenientPunctuation": false },
       "keys": ["l", "'", "a", "n"],
-      "expected": { "position": 4, "cells": "cxcc", "inserts": 4, "correctInserts": 3, "correctCells": 3, "uncorrected": 1, "rejected": 0 }
+      "expected": {
+        "position": 4,
+        "cells": "cxcc",
+        "inserts": 4,
+        "correctInserts": 3,
+        "correctCells": 3,
+        "uncorrected": 1,
+        "rejected": 0
+      }
     },
     {
       "name": "guillemets et tiret (souple)",
       "text": "« oui » – non",
       "rules": { "correction": "free", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["\"", " ", "o", "u", "i", " ", "\"", " ", "-", " ", "n", "o", "n"],
-      "expected": { "position": 13, "cells": "ccccccccccccc", "inserts": 13, "correctInserts": 13, "correctCells": 13, "uncorrected": 0, "rejected": 0 }
+      "expected": {
+        "position": 13,
+        "cells": "ccccccccccccc",
+        "inserts": 13,
+        "correctInserts": 13,
+        "correctCells": 13,
+        "uncorrected": 0,
+        "rejected": 0
+      }
     },
     {
       "name": "espace insécable tapée avec une espace (même en strict)",
       "text": "oui !",
       "rules": { "correction": "free", "backspaceAllowed": true, "lenientPunctuation": false },
       "keys": ["o", "u", "i", " ", "!"],
-      "expected": { "position": 5, "cells": "ccccc", "inserts": 5, "correctInserts": 5, "correctCells": 5, "uncorrected": 0, "rejected": 0 }
+      "expected": {
+        "position": 5,
+        "cells": "ccccc",
+        "inserts": 5,
+        "correctInserts": 5,
+        "correctCells": 5,
+        "uncorrected": 0,
+        "rejected": 0
+      }
     },
     {
       "name": "retour à la ligne tapé avec Entrée ou espace",
       "text": "a\nb\nc",
       "rules": { "correction": "free", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["a", "\n", "b", " ", "c"],
-      "expected": { "position": 5, "cells": "ccccc", "inserts": 5, "correctInserts": 5, "correctCells": 5, "uncorrected": 0, "rejected": 0 }
+      "expected": {
+        "position": 5,
+        "cells": "ccccc",
+        "inserts": 5,
+        "correctInserts": 5,
+        "correctCells": 5,
+        "uncorrected": 0,
+        "rejected": 0
+      }
     },
     {
       "name": "majuscule oubliée",
       "text": "Le",
       "rules": { "correction": "free", "backspaceAllowed": true, "lenientPunctuation": true },
       "keys": ["l", "e"],
-      "expected": { "position": 2, "cells": "xc", "inserts": 2, "correctInserts": 1, "correctCells": 1, "uncorrected": 1, "rejected": 0 }
+      "expected": {
+        "position": 2,
+        "cells": "xc",
+        "inserts": 2,
+        "correctInserts": 1,
+        "correctCells": 1,
+        "uncorrected": 1,
+        "rejected": 0
+      }
     }
   ]
 }

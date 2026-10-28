@@ -1,0 +1,82 @@
+{
+  "menu": "Practice",
+  "title": "Practice",
+  "shortcuts": "Esc: pause · Ctrl+R: restart · Ctrl+Enter: next text",
+  "typingInput": "Typing area",
+  "paused": "Paused — press Esc to resume.",
+  "saving": "Saving the session…",
+  "banner": {
+    "label": "Live statistics",
+    "wpm": "WPM",
+    "accuracy": "Accuracy",
+    "time": "Time",
+    "progress": "Progress"
+  },
+  "empty": {
+    "title": "No text to copy",
+    "body": "Paste a text into the library to get started.",
+    "action": "Open the library"
+  },
+  "resume": {
+    "title": "Interrupted session",
+    "body": "Your session on “{{title}}” stopped at {{progress}}%. Resume it?",
+    "continue": "Resume",
+    "discard": "Start over"
+  },
+  "summary": {
+    "title": "Session complete",
+    "wpmNet": "Net WPM",
+    "wpmRaw": "Raw WPM",
+    "cpm": "CPM",
+    "accuracy": "Accuracy",
+    "duration": "Duration",
+    "errors": "Errors",
+    "vsAverage": "{{delta}} vs. average",
+    "averageOver_one": "Compared with your previous session.",
+    "averageOver_other": "Compared with the average of your last {{count}} sessions.",
+    "firstSession": "First session: the comparison will appear next time.",
+    "mistyped_zero": "No mistyped word",
+    "mistyped_one": "1 mistyped word",
+    "mistyped_other": "{{count}} mistyped words",
+    "noMistake": "Well done, no mistyped word!",
+    "restart": "Restart",
+    "next": "Next text",
+    "library": "Library"
+  },
+  "errorType": {
+    "accent": "accent",
+    "missing_letter": "missing letter",
+    "extra_letter": "extra letter",
+    "transposition": "transposition",
+    "substitution": "wrong letter",
+    "missing_word": "missing word",
+    "extra_word": "extra word",
+    "punctuation": "punctuation",
+    "case": "capital letter"
+  },
+  "settings": {
+    "title": "Practice",
+    "fontSize": "Text size: {{size}} px",
+    "visibleLines": "Visible lines",
+    "activeLine": "Active line position",
+    "activeLines": { "top": "Top", "center": "Centre" },
+    "correction": "Error correction",
+    "corrections": {
+      "free": "Free: move on, the error is counted",
+      "blocking": "Blocking: fix before moving on"
+    },
+    "backspaceAllowed": "Allow backspace",
+    "showBanner": "Show the WPM / accuracy banner",
+    "lenientPunctuation": "Treat curly and straight quotes and dashes alike",
+    "goal": "Session type",
+    "goals": {
+      "wholeText": "Whole text",
+      "duration": "Fixed duration",
+      "words": "Word count"
+    },
+    "minutes": "Duration",
+    "minutesValue_one": "{{count}} minute",
+    "minutesValue_other": "{{count}} minutes",
+    "wordCount": "Word count"
+  }
+}

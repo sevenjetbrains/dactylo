@@ -1,0 +1,82 @@
+{
+  "menu": "S'entraîner",
+  "title": "Entraînement",
+  "shortcuts": "Échap : pause · Ctrl+R : recommencer · Ctrl+Entrée : texte suivant",
+  "typingInput": "Zone de frappe",
+  "paused": "En pause — appuyez sur Échap pour reprendre.",
+  "saving": "Enregistrement de la session…",
+  "banner": {
+    "label": "Statistiques en direct",
+    "wpm": "MPM",
+    "accuracy": "Précision",
+    "time": "Temps",
+    "progress": "Progression"
+  },
+  "empty": {
+    "title": "Aucun texte à recopier",
+    "body": "Ajoutez un texte par copier-coller dans la bibliothèque pour commencer.",
+    "action": "Ouvrir la bibliothèque"
+  },
+  "resume": {
+    "title": "Session interrompue",
+    "body": "Votre session sur « {{title}} » s'est arrêtée à {{progress}} %. Voulez-vous la reprendre ?",
+    "continue": "Reprendre",
+    "discard": "Recommencer à zéro"
+  },
+  "summary": {
+    "title": "Session terminée",
+    "wpmNet": "MPM net",
+    "wpmRaw": "MPM brut",
+    "cpm": "CPM",
+    "accuracy": "Précision",
+    "duration": "Durée",
+    "errors": "Erreurs",
+    "vsAverage": "{{delta}} par rapport à la moyenne",
+    "averageOver_one": "Comparaison avec votre session précédente.",
+    "averageOver_other": "Comparaison avec la moyenne de vos {{count}} dernières sessions.",
+    "firstSession": "Première session : la comparaison apparaîtra à la prochaine.",
+    "mistyped_zero": "Aucun mot fautif",
+    "mistyped_one": "1 mot fautif",
+    "mistyped_other": "{{count}} mots fautifs",
+    "noMistake": "Bravo, aucun mot mal écrit !",
+    "restart": "Recommencer",
+    "next": "Texte suivant",
+    "library": "Bibliothèque"
+  },
+  "errorType": {
+    "accent": "accent",
+    "missing_letter": "lettre manquante",
+    "extra_letter": "lettre en trop",
+    "transposition": "inversion",
+    "substitution": "lettre erronée",
+    "missing_word": "mot oublié",
+    "extra_word": "mot en trop",
+    "punctuation": "ponctuation",
+    "case": "majuscule"
+  },
+  "settings": {
+    "title": "Entraînement",
+    "fontSize": "Taille du texte : {{size}} px",
+    "visibleLines": "Lignes visibles",
+    "activeLine": "Position de la ligne active",
+    "activeLines": { "top": "En haut", "center": "Au centre" },
+    "correction": "Correction des erreurs",
+    "corrections": {
+      "free": "Libre : on avance, l'erreur est comptée",
+      "blocking": "Bloquante : corriger avant d'avancer"
+    },
+    "backspaceAllowed": "Autoriser le retour arrière",
+    "showBanner": "Afficher le bandeau MPM / précision",
+    "lenientPunctuation": "Assimiler apostrophes, guillemets et tirets (’ = ', « » = \")",
+    "goal": "Type de session",
+    "goals": {
+      "wholeText": "Texte entier",
+      "duration": "Durée fixe",
+      "words": "Nombre de mots"
+    },
+    "minutes": "Durée",
+    "minutesValue_one": "{{count}} minute",
+    "minutesValue_other": "{{count}} minutes",
+    "wordCount": "Nombre de mots"
+  }
+}
