@@ -13,9 +13,13 @@ pub const MAX_TITLE_CHARS: usize = 200;
 #[derive(Debug, Clone, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct NewText {
+    /// Titre, obligatoire.
     pub title: String,
+    /// Contenu, obligatoire.
     pub content: String,
+    /// Catégorie et étiquettes libres.
     pub tags: Vec<String>,
+    /// Code de langue (« fr » si vide).
     pub language: String,
 }
 
@@ -23,26 +27,39 @@ pub struct NewText {
 #[derive(Debug, Clone, PartialEq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TextSummary {
+    /// Identifiant UUIDv7.
     pub id: String,
+    /// Titre.
     pub title: String,
+    /// Code de langue.
     pub language: String,
+    /// Étiquettes triées, sans doublon.
     pub tags: Vec<String>,
     /// Nombre de caractères du contenu.
     pub length: u32,
+    /// Date d'ajout, en ms Unix.
     pub created_at: i64,
 }
 
+/// Ligne SQL brute d'un résumé, avant conversion.
 #[derive(sqlx::FromRow)]
 struct SummaryRow {
+    /// Identifiant.
     id: String,
+    /// Titre.
     title: String,
+    /// Code de langue.
     language: String,
+    /// Étiquettes en JSON.
     tags: String,
+    /// Longueur du contenu, calculée par SQLite.
     length: i64,
+    /// Date d'ajout.
     created_at: i64,
 }
 
 impl From<SummaryRow> for TextSummary {
+    /// Décode les étiquettes JSON ; un JSON illisible donne une liste vide.
     fn from(row: SummaryRow) -> Self {
         Self {
             id: row.id,
@@ -58,13 +75,17 @@ impl From<SummaryRow> for TextSummary {
 /// Contenu d'un texte, pour une session.
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct TextContent {
+    /// Identifiant.
     pub id: String,
+    /// Titre.
     pub title: String,
+    /// Contenu normalisé.
     pub content: String,
 }
 
 /// Valide et enregistre un texte collé. Le contenu doit déjà être normalisé.
 pub async fn create(pool: &SqlitePool, input: NewText) -> AppResult<TextSummary> {
+    // Titre obligatoire et borné.
     let title = input.title.trim();
     if title.is_empty() {
         return Err(AppError::Invalid("le titre est vide".into()));
@@ -74,9 +95,11 @@ pub async fn create(pool: &SqlitePool, input: NewText) -> AppResult<TextSummary>
             "le titre dépasse {MAX_TITLE_CHARS} caractères"
         )));
     }
+    // Un texte fait uniquement d'espaces est vide.
     if input.content.trim().is_empty() {
         return Err(AppError::Invalid("le texte est vide".into()));
     }
+    // Étiquettes nettoyées : sans espaces autour, sans vide, triées, sans doublon.
     let mut tags: Vec<String> = input
         .tags
         .iter()
@@ -85,11 +108,13 @@ pub async fn create(pool: &SqlitePool, input: NewText) -> AppResult<TextSummary>
         .collect();
     tags.sort();
     tags.dedup();
+    // Le français est la langue par défaut.
     let language = match input.language.trim() {
         "" => "fr",
         l => l,
     };
 
+    // Un texte collé a la source « paste » ; création et modification à la même date.
     let id = new_id();
     let now = now_ms();
     sqlx::query(
@@ -126,6 +151,7 @@ pub async fn list(pool: &SqlitePool) -> AppResult<Vec<TextSummary>> {
     Ok(rows.into_iter().map(Into::into).collect())
 }
 
+/// Lit le contenu d'un texte ; `NotFound` s'il n'existe pas.
 pub async fn get(pool: &SqlitePool, id: &str) -> AppResult<TextContent> {
     sqlx::query_as("SELECT id, title, content FROM texts WHERE id = ?")
         .bind(id)
@@ -146,22 +172,27 @@ pub async fn latest(pool: &SqlitePool) -> AppResult<Option<String>> {
 /// Texte suivant dans l'ordre de la bibliothèque (Ctrl+Entrée, F-07) ;
 /// revient au premier après le dernier. `None` s'il n'y a pas d'autre texte.
 pub async fn next_after(pool: &SqlitePool, id: &str) -> AppResult<Option<String>> {
+    // Tous les identifiants, dans l'ordre d'affichage de la bibliothèque.
     let ids: Vec<String> =
         sqlx::query_scalar("SELECT id FROM texts ORDER BY created_at DESC, id DESC")
             .fetch_all(pool)
             .await?;
+    // Texte inconnu (supprimé entre-temps) : on repart du premier.
     let Some(index) = ids.iter().position(|i| i == id) else {
         return Ok(ids.into_iter().next());
     };
+    // Le suivant, en revenant au début après le dernier ; rien s'il n'y a qu'un texte.
     let next = &ids[(index + 1) % ids.len()];
     Ok((next != id).then(|| next.clone()))
 }
 
+/// Tests du dépôt des textes.
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::db::connect_in_memory;
 
+    /// Texte minimal sans étiquette, en français.
     fn sample(title: &str, content: &str) -> NewText {
         NewText {
             title: title.into(),
@@ -171,9 +202,11 @@ mod tests {
         }
     }
 
+    /// Un texte créé est nettoyé, listé et relu à l'identique.
     #[tokio::test]
     async fn create_then_list_and_get() {
         let pool = connect_in_memory().await.unwrap();
+        // Titre entouré d'espaces, étiquettes vides et en double.
         let created = create(
             &pool,
             NewText {
@@ -187,6 +220,7 @@ mod tests {
         assert_eq!(created.tags, ["a", "conte"]);
         assert_eq!(created.length, 18);
 
+        // La liste et la lecture donnent le même texte.
         let listed = list(&pool).await.unwrap();
         assert_eq!(listed, vec![created.clone()]);
 
@@ -195,6 +229,7 @@ mod tests {
         assert_eq!(latest(&pool).await.unwrap(), Some(created.id));
     }
 
+    /// Titre vide, contenu vide ou titre trop long sont refusés.
     #[tokio::test]
     async fn empty_title_or_content_is_rejected() {
         let pool = connect_in_memory().await.unwrap();
@@ -209,10 +244,12 @@ mod tests {
             create(&pool, sample(&long, "texte")).await,
             Err(AppError::Invalid(_))
         ));
+        // Rien n'a été enregistré.
         assert!(list(&pool).await.unwrap().is_empty());
         assert_eq!(latest(&pool).await.unwrap(), None);
     }
 
+    /// Un texte inconnu donne `NotFound`.
     #[tokio::test]
     async fn unknown_text_is_not_found() {
         let pool = connect_in_memory().await.unwrap();
@@ -222,6 +259,7 @@ mod tests {
         ));
     }
 
+    /// Le texte suivant parcourt la bibliothèque en boucle.
     #[tokio::test]
     async fn next_after_cycles_through_the_library() {
         let pool = connect_in_memory().await.unwrap();

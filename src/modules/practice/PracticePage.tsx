@@ -1,3 +1,5 @@
+/** Page du mode Copie. */
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router';
@@ -21,6 +23,7 @@ import { FALLBACK_COLUMNS } from './layout';
 import { TypingArea } from './TypingArea';
 import { useKeystrokeSync } from './use-keystroke-sync';
 
+/** Ce que la page affiche : chargement, offre de reprise, bibliothèque vide, erreur, frappe ou résumé. */
 type Phase =
   | { kind: 'loading' }
   | { kind: 'offer'; pending: PendingSession }
@@ -32,10 +35,12 @@ type Phase =
 /** Rafraîchissement du bandeau et du chronomètre. */
 const TICK_MS = 250;
 
+/** L'erreur vient-elle du backend (code + message) ? */
 function isApiError(e: unknown): e is ApiError {
   return typeof e === 'object' && e !== null && 'code' in e && 'message' in e;
 }
 
+/** Message lisible d'une erreur quelconque. */
 function messageOf(e: unknown): string {
   return isApiError(e) || e instanceof Error ? e.message : String(e);
 }
@@ -44,14 +49,17 @@ function messageOf(e: unknown): string {
 export default function PracticePage() {
   const { t, i18n } = useTranslation('practice');
   const [params] = useSearchParams();
+  // Texte demandé par l'URL (`?text=<id>`), sinon le plus récent.
   const requested = params.get('text');
   const navigate = useNavigate();
 
+  // État local : étape, largeur en colonnes, débuts de ligne, horloge du bandeau.
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' });
   const [columns, setColumns] = useState<number>(FALLBACK_COLUMNS);
   const [lineStarts, setLineStarts] = useState<number[] | null>(null);
   const [now, setNow] = useState(() => performance.now());
 
+  // État de la session, lu dans le store ; chaque sélecteur limite les rendus.
   const session = usePracticeStore((s) => s.session);
   const engine = usePracticeStore((s) => s.engine);
   const version = usePracticeStore((s) => s.version);
@@ -63,6 +71,7 @@ export default function PracticePage() {
   // Chaque requête reçoit un jeton : une réponse arrivée trop tard est ignorée.
   const request = useRef(0);
 
+  /** Démarre une nouvelle session sur le texte donné (ou le plus récent). */
   const begin = useCallback(async (textId: string | null) => {
     const token = ++request.current;
     setPhase({ kind: 'loading' });
@@ -74,6 +83,7 @@ export default function PracticePage() {
       setPhase({ kind: 'session' });
     } catch (e) {
       if (token !== request.current) return;
+      // Aucun texte du tout : on propose la bibliothèque plutôt qu'une erreur.
       setPhase(
         isApiError(e) && e.code === 'notFound' && textId === null
           ? { kind: 'empty' }
@@ -95,6 +105,7 @@ export default function PracticePage() {
       .catch((e: unknown) => {
         if (token === requests.current) setPhase({ kind: 'error', message: messageOf(e) });
       });
+    // Au démontage ou au changement de texte, la réponse en cours sera ignorée.
     return () => {
       requests.current++;
     };
@@ -111,6 +122,7 @@ export default function PracticePage() {
   useEffect(() => {
     if (!sessionId) return;
     let active = true;
+    // Léger délai : un redimensionnement continu ne déclenche qu'un appel.
     const timer = setTimeout(() => {
       unwrap(commands.wrapText(sessionId, columns))
         .then((starts) => active && setLineStarts(starts))
@@ -139,6 +151,7 @@ export default function PracticePage() {
     const token = request.current;
     void (async () => {
       try {
+        // Les dernières frappes doivent être en base avant le calcul final.
         await flush();
         const ms = activeMs(usePracticeStore.getState().clock, performance.now());
         const summary = await unwrap(commands.finishSession(sessionId, ms));
@@ -150,6 +163,7 @@ export default function PracticePage() {
     })();
   }, [status, sessionId, flush]);
 
+  /** Transmet une frappe au store, horodatée. */
   const onKey = useCallback((key: RawKey) => {
     usePracticeStore.getState().input(key, performance.now());
   }, []);
@@ -161,8 +175,10 @@ export default function PracticePage() {
   const dropCurrent = useCallback(() => {
     const { session: current, status: currentStatus, takeBatch } = usePracticeStore.getState();
     if (!current) return null;
+    // Nouveau jeton : les réponses des actions précédentes deviennent caduques.
     const token = ++request.current;
     let dropped: Promise<unknown> = Promise.resolve();
+    // Une session terminée est déjà enregistrée : on ne la supprime pas.
     if (currentStatus !== 'done') {
       takeBatch();
       dropped = unwrap(commands.abandonSession(current.sessionId)).catch(() => undefined);
@@ -170,6 +186,7 @@ export default function PracticePage() {
     return { textId: current.textId, token, dropped };
   }, []);
 
+  /** Recommence le même texte (Ctrl+R) après abandon de la session en cours. */
   const restart = useCallback(async () => {
     const current = dropCurrent();
     if (!current) return;
@@ -177,6 +194,7 @@ export default function PracticePage() {
     if (current.token === request.current) await begin(current.textId);
   }, [dropCurrent, begin]);
 
+  /** Passe au texte suivant (Ctrl+Entrée) ; reste sur le même s'il est seul. */
   const next = useCallback(async () => {
     const current = dropCurrent();
     if (!current) return;
@@ -186,6 +204,7 @@ export default function PracticePage() {
     ]);
     // Page quittée ou autre action lancée entre-temps.
     if (current.token !== request.current) return;
+    // Changer l'URL relance la page ; même URL : on redémarre directement.
     const target = nextId ?? current.textId;
     if (target !== requested) navigate(`/practice?text=${encodeURIComponent(target)}`);
     else await begin(target);
@@ -203,6 +222,7 @@ export default function PracticePage() {
         e.preventDefault();
         void next();
       } else if (e.key === 'Escape') {
+        // Pause seulement pendant la frappe ; on envoie les frappes au moment de la pause.
         const store = usePracticeStore.getState();
         if (store.status === 'typing' || store.status === 'paused') {
           e.preventDefault();
@@ -215,6 +235,7 @@ export default function PracticePage() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [restart, next, flush]);
 
+  /** Reprend la session interrompue proposée. */
   const resume = async (id: string) => {
     const token = ++request.current;
     setPhase({ kind: 'loading' });
@@ -228,6 +249,7 @@ export default function PracticePage() {
     }
   };
 
+  /** Abandonne la session interrompue et en démarre une nouvelle. */
   const discard = async (id: string) => {
     await unwrap(commands.abandonSession(id)).catch(() => undefined);
     await begin(requested);
@@ -235,6 +257,7 @@ export default function PracticePage() {
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
+      {/* Titre du texte pendant la session, titre de la page sinon ; rappel des raccourcis. */}
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-2xl font-semibold">
           {phase.kind === 'session' || phase.kind === 'summary'
@@ -252,6 +275,7 @@ export default function PracticePage() {
         </p>
       )}
 
+      {/* Bibliothèque vide : renvoi vers l'ajout de texte. */}
       {phase.kind === 'empty' && (
         <Card>
           <CardTitle>{t('empty.title')}</CardTitle>
@@ -262,6 +286,7 @@ export default function PracticePage() {
         </Card>
       )}
 
+      {/* Proposition de reprise (NF-06) : continuer ou repartir de zéro. */}
       {phase.kind === 'offer' && (
         <Card>
           <CardTitle>{t('resume.title')}</CardTitle>
@@ -282,6 +307,7 @@ export default function PracticePage() {
         </Card>
       )}
 
+      {/* Session en cours : bandeau, zone de frappe et état. */}
       {phase.kind === 'session' && session && engine && (
         <>
           {session.settings.showBanner && (
@@ -296,6 +322,7 @@ export default function PracticePage() {
               elapsedMs={activeMs(clock, now)}
             />
           )}
+          {/* La zone attend le découpage en lignes calculé par le cœur. */}
           {lineStarts ? (
             <TypingArea
               engine={engine}
@@ -322,6 +349,7 @@ export default function PracticePage() {
         </>
       )}
 
+      {/* Écran de fin (F-32). */}
       {phase.kind === 'summary' && (
         <SessionSummary
           summary={phase.summary}

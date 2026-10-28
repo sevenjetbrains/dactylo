@@ -1,3 +1,5 @@
+/** Configuration des tests unitaires, construite sur celle de Vite. */
+
 import { defineConfig, mergeConfig } from 'vitest/config';
 
 import viteConfig from './vite.config.ts';
@@ -12,6 +14,7 @@ export default mergeConfig(
       globals: true,
       setupFiles: ['./src/test/setup.ts'],
       include: ['src/**/*.test.{ts,tsx}'],
+      // Le client généré est exclu de la couverture.
       coverage: { provider: 'v8', include: ['src/**'], exclude: ['src/shared/api/bindings.ts'] },
     },
   }),

@@ -1,3 +1,5 @@
+/** Écran de fin de session du mode Copie. */
+
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
@@ -8,9 +10,13 @@ import { cn } from '@/shared/lib/utils';
 
 import { formatDuration, formatNumber } from './format';
 
+/** Propriétés de l'écran de fin. */
 interface Props {
+  /** Résumé renvoyé par le backend. */
   summary: Summary;
+  /** Recommencer le même texte. */
   onRestart: () => void;
+  /** Passer au texte suivant. */
   onNext: () => void;
 }
 
@@ -20,6 +26,7 @@ export function SessionSummary({ summary, onRestart, onNext }: Props) {
   const { stats, average, errors } = summary;
   const lang = i18n.language;
 
+  // Écart avec la moyenne, en vert s'il est favorable ; rien sans moyenne.
   const delta = (value: number | null, mean: number | null | undefined, unit = '') => {
     if (average == null || mean == null) return null;
     const diff = (value ?? 0) - mean;
@@ -36,6 +43,7 @@ export function SessionSummary({ summary, onRestart, onNext }: Props) {
     );
   };
 
+  // Tuiles chiffrées ; seules les trois premières se comparent à la moyenne.
   const tiles = [
     {
       label: t('summary.wpmNet'),
@@ -56,6 +64,7 @@ export function SessionSummary({ summary, onRestart, onNext }: Props) {
     { label: t('summary.duration'), value: formatDuration(stats.durationMs), delta: null },
     { label: t('summary.errors'), value: formatNumber(stats.errors, lang), delta: null },
   ];
+  // Seuls les mots fautifs sont listés, pas la ponctuation isolée.
   const words = errors.filter((e) => e.word);
 
   return (
@@ -70,11 +79,13 @@ export function SessionSummary({ summary, onRestart, onNext }: Props) {
           </div>
         ))}
       </dl>
+      {/* Rappel du nombre de sessions de la moyenne, ou mention de la première session. */}
       <p className="text-sm text-muted-foreground">
         {average
           ? t('summary.averageOver', { count: average.sessions })
           : t('summary.firstSession')}
       </p>
+      {/* Mots fautifs : attendu, tapé (barré) et type de faute. */}
       <Card>
         <CardTitle>{t('summary.mistyped', { count: words.length })}</CardTitle>
         {words.length === 0 ? (
@@ -93,6 +104,7 @@ export function SessionSummary({ summary, onRestart, onNext }: Props) {
           </ul>
         )}
       </Card>
+      {/* Actions : recommencer, texte suivant, bibliothèque. */}
       <div className="flex flex-wrap gap-3">
         <Button onClick={onRestart}>{t('summary.restart')}</Button>
         <Button variant="outline" onClick={onNext}>

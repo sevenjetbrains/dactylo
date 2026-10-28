@@ -1,3 +1,5 @@
+/** Fournisseur du contexte des modules. */
+
 import type { ReactNode } from 'react';
 
 import { ModulesContext } from './use-modules';

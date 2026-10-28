@@ -1,3 +1,5 @@
+/** Tests du registre de modules, du menu et du routeur. */
+
 import { render, screen } from '@testing-library/react';
 import { Bug } from 'lucide-react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
@@ -11,6 +13,7 @@ import { modules } from './registry';
 import { buildRoutes } from './router';
 import type { ModuleManifest } from './types';
 
+// Backend simulé : les appels de l'accueil restent en attente, sans effet.
 vi.mock('@/shared/api', () => ({
   commands: {
     currentProfile: vi.fn(() => new Promise(() => {})),
@@ -19,6 +22,7 @@ vi.mock('@/shared/api', () => ({
   unwrap: (p: Promise<unknown>) => p,
 }));
 
+/** Module factice « Hello », pour prouver qu'un module s'ajoute en une ligne. */
 const hello: ModuleManifest = {
   id: 'hello',
   route: { path: 'hello', component: () => <p>Bonjour depuis Hello</p> },
@@ -58,12 +62,14 @@ describe('registre de modules', () => {
   });
 
   it("un module ajouté au tableau obtient sa route et son entrée de menu (preuve d'extensibilité)", async () => {
+    // Le registre réel plus le module factice, ouvert sur sa route.
     i18n.addResourceBundle('fr', 'hello', { menu: 'Hello' });
     const router = createMemoryRouter(buildRoutes([...modules, hello]), {
       initialEntries: ['/hello'],
     });
     render(<RouterProvider router={router} />);
 
+    // Sa page s'affiche et son lien rejoint ceux des modules existants.
     expect(await screen.findByText('Bonjour depuis Hello')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Accueil' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: 'Réglages' })).toHaveAttribute('href', '/settings');

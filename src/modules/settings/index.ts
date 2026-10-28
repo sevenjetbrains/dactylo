@@ -1,3 +1,5 @@
+/** Déclaration du module Réglages auprès du registre. */
+
 import { Settings } from 'lucide-react';
 import { lazy } from 'react';
 
@@ -7,6 +9,7 @@ import { AppearancePanel } from './AppearancePanel';
 import en from './locales/en.json';
 import fr from './locales/fr.json';
 
+/** Réglages : page qui rassemble les panneaux de tous les modules, plus l'apparence. */
 export const settings: ModuleManifest = {
   id: 'settings',
   route: { path: 'settings', component: lazy(() => import('./SettingsPage')) },

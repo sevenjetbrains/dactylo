@@ -1,3 +1,5 @@
+/** Page d'accueil. */
+
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
@@ -5,9 +7,11 @@ import { Link } from 'react-router';
 import { commands, unwrap, type PendingSession, type Profile } from '@/shared/api';
 import { Card, CardTitle } from '@/shared/ui/card';
 
+/** Lien présenté comme un bouton principal. */
 const linkClass =
   'inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
+/** Accueil : salutation, reprise d'une session interrompue et accès à l'entraînement. */
 export default function HomePage() {
   const { t } = useTranslation('home');
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -15,8 +19,10 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // `active` ignore les réponses arrivées après le démontage de la page.
     let active = true;
     const fail = (e: unknown) => active && setError(e instanceof Error ? e.message : String(e));
+    // Profil courant, pour la salutation.
     unwrap(commands.currentProfile())
       .then((p) => active && setProfile(p))
       .catch(fail);
@@ -31,6 +37,7 @@ export default function HomePage() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
+      {/* Salutation générique tant que le profil n'est pas chargé. */}
       <h1 className="text-2xl font-semibold">
         {profile ? t('welcomeName', { name: profile.name }) : t('welcome')}
       </h1>
@@ -39,6 +46,7 @@ export default function HomePage() {
           {t('common:error.generic', { message: error })}
         </p>
       )}
+      {/* Carte de reprise, seulement s'il y a une session interrompue. */}
       {pending && (
         <Card>
           <CardTitle>{t('resumeTitle')}</CardTitle>
@@ -53,6 +61,7 @@ export default function HomePage() {
           </Link>
         </Card>
       )}
+      {/* Accès à l'entraînement et à la bibliothèque. */}
       <Card>
         <CardTitle>{t('startTitle')}</CardTitle>
         <p className="mb-4 text-muted-foreground">{t('startBody')}</p>

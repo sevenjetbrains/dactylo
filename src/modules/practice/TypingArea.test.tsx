@@ -1,3 +1,5 @@
+/** Tests de la zone de frappe : saisie (touches mortes comprises) et affichage. */
+
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -5,9 +7,12 @@ import { Cell, splitGraphemes, TypingEngine, type RawKey } from './engine/sessio
 import { firstVisibleLine, lineOf } from './layout';
 import { TypingArea } from './TypingArea';
 
+/** Réglages d'affichage des tests : 2 lignes visibles. */
 const settings = { fontSize: 20, visibleLines: 2, activeLine: 'top' as const };
+/** Règles par défaut : mode libre. */
 const rules = { correction: 'free' as const, backspaceAllowed: true, lenientPunctuation: true };
 
+/** Rend la zone sur un texte et renvoie le moteur, le rappel espion et le champ de saisie. */
 function setup(text = 'la forêt', lineStarts = [0]) {
   const engine = new TypingEngine(splitGraphemes(text), rules);
   const onKey = vi.fn<(key: RawKey) => void>();
@@ -26,6 +31,7 @@ function setup(text = 'la forêt', lineStarts = [0]) {
   return { engine, onKey, input, view };
 }
 
+/** Émet un `beforeinput` comme le ferait le navigateur ; renvoie l'événement pour inspection. */
 function beforeInput(target: Element, inputType: string, data: string | null, isComposing = false) {
   const event = new InputEvent('beforeinput', {
     inputType,
@@ -89,6 +95,7 @@ describe('TypingArea — saisie', () => {
 
 describe('TypingArea — affichage', () => {
   it('colore les caractères et garde le caractère attendu visible en cas d’erreur (F-02)', () => {
+    // « a » juste, « x » à la place de « b », puis « x » à la place de l'espace.
     const engine = new TypingEngine(splitGraphemes('ab c'), rules);
     engine.apply({ kind: 'insert', typed: 'a' });
     engine.apply({ kind: 'insert', typed: 'x' });
@@ -104,6 +111,7 @@ describe('TypingArea — affichage', () => {
         onColumns={() => {}}
       />,
     );
+    // Les caractères attendus restent affichés (l'espace fausse en ·), le curseur est sur « c ».
     const cells = container.querySelectorAll('[data-cell]');
     expect(Array.from(cells, (c) => c.textContent)).toEqual(['a', 'b', '·', 'c']);
     expect(Array.from(cells, (c) => Number(c.getAttribute('data-cell')))).toEqual([

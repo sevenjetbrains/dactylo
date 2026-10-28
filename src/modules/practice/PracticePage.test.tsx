@@ -1,3 +1,5 @@
+/** Tests de la page du mode Copie : session complète, raccourcis et reprise. */
+
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
@@ -7,6 +9,7 @@ import PracticePage from './PracticePage';
 import { splitGraphemes } from './engine/session';
 import { usePracticeStore } from './store';
 
+/** Espions des commandes utilisées par la page. */
 const api = {
   pendingSession: vi.fn(),
   startSession: vi.fn(),
@@ -18,6 +21,7 @@ const api = {
   nextTextId: vi.fn(),
 };
 
+// Toute commande appelée est redirigée vers l'espion du même nom.
 vi.mock('@/shared/api', () => ({
   commands: new Proxy(
     {},
@@ -35,8 +39,10 @@ vi.mock('@/shared/api', () => ({
   },
 }));
 
+/** Réponse réussie au format tauri-specta. */
 const ok = (data: unknown) => Promise.resolve({ status: 'ok', data });
 
+/** Réglages par défaut. */
 const settings = {
   fontSize: 20,
   visibleLines: 3,
@@ -48,6 +54,7 @@ const settings = {
   goal: { type: 'wholeText' },
 };
 
+/** Démarrage de session sur « le chat », modifiable champ par champ. */
 function sessionStart(overrides: Record<string, unknown> = {}) {
   return {
     sessionId: 's1',
@@ -65,6 +72,7 @@ function sessionStart(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/** Résumé renvoyé par `finishSession` : un mot fautif, pas de moyenne. */
 const summary = {
   sessionId: 's1',
   textId: 't1',
@@ -82,6 +90,7 @@ const summary = {
   average: null,
 };
 
+/** Rend la page à l'URL donnée. */
 function renderPage(entry = '/practice?text=t1') {
   return render(
     <MemoryRouter initialEntries={[entry]}>
@@ -90,6 +99,7 @@ function renderPage(entry = '/practice?text=t1') {
   );
 }
 
+/** Tape un texte graphème par graphème, comme le navigateur. */
 function type(target: Element, text: string) {
   for (const g of splitGraphemes(text)) {
     fireEvent(
@@ -100,6 +110,7 @@ function type(target: Element, text: string) {
 }
 
 describe('PracticePage', () => {
+  // Store vidé et backend par défaut : pas de reprise, une session, envois acceptés.
   beforeEach(() => {
     usePracticeStore.getState().reset();
     for (const fn of Object.values(api)) fn.mockReset();
@@ -120,15 +131,18 @@ describe('PracticePage', () => {
     expect(api.startSession).toHaveBeenCalledWith('t1');
     expect(screen.getByLabelText('Statistiques en direct')).toBeInTheDocument();
 
+    // « x » à la place de « e », puis le reste juste jusqu'à la fin du texte.
     type(input, 'lx chat');
 
     expect(await screen.findByRole('heading', { name: 'Session terminée' })).toBeInTheDocument();
+    // Toutes les frappes ont été envoyées, dans l'ordre et numérotées sans trou.
     const sent = api.recordKeystrokes.mock.calls.flatMap(
       ([, keys]) => keys as { seq: number; kind: string; typed: string }[],
     );
     expect(sent.map((k) => k.typed).join('')).toBe('lx chat');
     expect(sent.map((k) => k.seq)).toEqual([0, 1, 2, 3, 4, 5, 6]);
     expect(api.finishSession).toHaveBeenCalledWith('s1', expect.any(Number));
+    // Le résumé affiche le mot fautif et son type.
     expect(screen.getByText('lx')).toBeInTheDocument();
     expect(screen.getByText('lettre erronée')).toBeInTheDocument();
     expect(screen.getByText(/Première session/)).toBeInTheDocument();
@@ -143,6 +157,7 @@ describe('PracticePage', () => {
     expect(input).toBeDisabled();
     expect(usePracticeStore.getState().status).toBe('paused');
 
+    // Second Échap : reprise, et la frappe suivante est acceptée.
     fireEvent.keyDown(window, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByText(/En pause/)).not.toBeInTheDocument());
     type(input, 'e');
@@ -153,6 +168,7 @@ describe('PracticePage', () => {
     renderPage();
     const input = await screen.findByLabelText('Zone de frappe');
     type(input, 'le');
+    // Ctrl+R est intercepté (pas de rechargement) et relance une session vierge.
     const event = new KeyboardEvent('keydown', { key: 'r', ctrlKey: true, cancelable: true });
     window.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(true);
@@ -173,6 +189,7 @@ describe('PracticePage', () => {
     api.pendingSession.mockReturnValue(
       ok({ sessionId: 's0', title: 'Le chat', progress: 0.25, startedAt: 0 }),
     );
+    // La session reprise contient déjà « le », tapé en 400 ms.
     api.resumeSession.mockReturnValue(
       ok(
         sessionStart({
@@ -192,6 +209,7 @@ describe('PracticePage', () => {
     const input = await screen.findByLabelText('Zone de frappe');
     expect(api.resumeSession).toHaveBeenCalledWith('s0');
     expect(usePracticeStore.getState().engine?.position).toBe(2);
+    // La frappe suivante continue la numérotation et le temps.
     type(input, ' ');
     expect(usePracticeStore.getState().queue).toEqual([
       { seq: 2, kind: 'insert', typed: ' ', tMs: 400 },

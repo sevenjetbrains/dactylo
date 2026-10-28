@@ -1,3 +1,5 @@
+/** Déclaration du module Bibliothèque auprès du registre. */
+
 import { LibraryBig } from 'lucide-react';
 import { lazy } from 'react';
 

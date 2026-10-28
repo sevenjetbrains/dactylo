@@ -1,3 +1,5 @@
+/** Coquille de l'application : menu latéral et zone de contenu. */
+
 import { Suspense, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, Outlet } from 'react-router';
@@ -7,8 +9,10 @@ import { cn } from '@/shared/lib/utils';
 import { buildMenu } from './menu';
 import type { ModuleManifest } from './types';
 
+/** Menu construit depuis le registre ; la page du module s'affiche à droite. */
 export function Shell({ modules }: { modules: readonly ModuleManifest[] }) {
   const { t } = useTranslation();
+  // Le menu ne dépend que du registre.
   const menu = useMemo(() => buildMenu(modules), [modules]);
 
   return (
@@ -22,6 +26,7 @@ export function Shell({ modules }: { modules: readonly ModuleManifest[] }) {
           <NavLink
             key={moduleId}
             to={path}
+            // L'accueil n'est actif que sur « / » exactement, pas sur toutes les routes.
             end={path === '/'}
             className={({ isActive }) =>
               cn(
@@ -37,6 +42,7 @@ export function Shell({ modules }: { modules: readonly ModuleManifest[] }) {
         ))}
       </nav>
       <main className="flex-1 overflow-auto p-8">
+        {/* Les pages sont chargées à la demande : message d'attente entre-temps. */}
         <Suspense fallback={<p>{t('common:loading')}</p>}>
           <Outlet />
         </Suspense>

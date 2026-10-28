@@ -1,12 +1,17 @@
+/** Tests du panneau des réglages d'entraînement. */
+
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import PracticeSettingsPanel from './PracticeSettingsPanel';
 
+/** Réponse simulée du chargement des réglages. */
 const getPracticeSettings = vi.fn();
+/** Espion de l'enregistrement des réglages. */
 const savePracticeSettings = vi.fn();
 
+// Client simulé ; `unwrap` reproduit le vrai comportement (rejet en cas d'erreur).
 vi.mock('@/shared/api', () => ({
   commands: {
     getPracticeSettings: () => getPracticeSettings(),
@@ -19,6 +24,7 @@ vi.mock('@/shared/api', () => ({
   },
 }));
 
+/** Réglages par défaut, comme renvoyés par le backend. */
 const defaults = {
   fontSize: 20,
   visibleLines: 3,
@@ -31,6 +37,7 @@ const defaults = {
 };
 
 describe('PracticeSettingsPanel', () => {
+  // Chargement réussi ; l'enregistrement renvoie ce qu'il reçoit.
   beforeEach(() => {
     getPracticeSettings.mockResolvedValue({ status: 'ok', data: defaults });
     savePracticeSettings.mockImplementation((s: unknown) =>
@@ -41,6 +48,7 @@ describe('PracticeSettingsPanel', () => {
   it('enregistre chaque changement (F-03, F-04, F-05)', async () => {
     render(<PracticeSettingsPanel />);
     const user = userEvent.setup();
+    // Chaque contrôle déclenche un enregistrement avec la nouvelle valeur.
     await user.selectOptions(await screen.findByLabelText('Lignes visibles'), '5');
     expect(savePracticeSettings).toHaveBeenLastCalledWith({ ...defaults, visibleLines: 5 });
 
@@ -63,6 +71,7 @@ describe('PracticeSettingsPanel', () => {
   it('choisit une session chronométrée ou un nombre de mots (F-06)', async () => {
     render(<PracticeSettingsPanel />);
     const user = userEvent.setup();
+    // Session chronométrée : 1 minute par défaut, puis 5 minutes.
     await user.selectOptions(await screen.findByLabelText('Type de session'), 'duration');
     expect(savePracticeSettings).toHaveBeenLastCalledWith(
       expect.objectContaining({ goal: { type: 'duration', minutes: 1 } }),
@@ -72,6 +81,7 @@ describe('PracticeSettingsPanel', () => {
       expect.objectContaining({ goal: { type: 'duration', minutes: 5 } }),
     );
 
+    // Nombre de mots : 50 par défaut.
     await user.selectOptions(screen.getByLabelText('Type de session'), 'words');
     await waitFor(() => expect(screen.getByLabelText('Nombre de mots')).toHaveValue(50));
   });

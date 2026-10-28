@@ -1,3 +1,5 @@
+/** Registre central des modules de l'application. */
+
 import { home } from '@/modules/home';
 import { library } from '@/modules/library';
 import { practice } from '@/modules/practice';

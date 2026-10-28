@@ -1,3 +1,5 @@
+/** Déclaration du module Accueil auprès du registre. */
+
 import { House } from 'lucide-react';
 import { lazy } from 'react';
 
@@ -6,6 +8,7 @@ import type { ModuleManifest } from '@/app/types';
 import en from './locales/en.json';
 import fr from './locales/fr.json';
 
+/** Accueil : page racine, première entrée du menu. */
 export const home: ModuleManifest = {
   id: 'home',
   route: { path: '', component: lazy(() => import('./HomePage')) },

@@ -7,9 +7,11 @@ export const FALLBACK_COLUMNS = 60;
 
 /** Index de la ligne qui contient `position` (recherche dichotomique). */
 export function lineOf(lineStarts: number[], position: number): number {
+  // Invariant : la ligne cherchée est dans [lo, hi].
   let lo = 0;
   let hi = lineStarts.length - 1;
   while (lo < hi) {
+    // Milieu arrondi vers le haut, pour que `lo = mid` avance toujours.
     const mid = (lo + hi + 1) >> 1;
     if ((lineStarts[mid] ?? 0) <= position) lo = mid;
     else hi = mid - 1;
@@ -23,6 +25,7 @@ export function firstVisibleLine(
   visibleLines: number,
   mode: PracticeSettings['activeLine'],
 ): number {
+  // Au centre, la ligne active a autant de lignes au-dessus qu'en dessous ; jamais avant la première.
   const offset = mode === 'center' ? Math.floor((visibleLines - 1) / 2) : 0;
   return Math.max(0, activeLine - offset);
 }

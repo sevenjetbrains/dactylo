@@ -9,15 +9,20 @@ use crate::state::AppState;
 
 /// Abonné qui garde chaque événement reçu.
 #[derive(Default)]
-pub struct Recorder(pub Mutex<Vec<DomainEvent>>);
+pub struct Recorder(
+    /// Événements reçus, dans l'ordre d'arrivée.
+    pub Mutex<Vec<DomainEvent>>,
+);
 
 impl EventSubscriber for Recorder {
+    /// Ajoute l'événement à la liste.
     fn on_event(&self, event: &DomainEvent) {
         self.0.lock().unwrap().push(event.clone());
     }
 }
 
 impl Recorder {
+    /// Copie des événements reçus jusqu'ici.
     pub fn events(&self) -> Vec<DomainEvent> {
         self.0.lock().unwrap().clone()
     }
@@ -25,8 +30,10 @@ impl Recorder {
 
 /// État d'application sur une base en mémoire, avec le profil par défaut.
 pub async fn state() -> (AppState, Arc<Recorder>) {
+    // Base vierge, migrations appliquées, profil par défaut créé.
     let pool = connect_in_memory().await.unwrap();
     let profile = profiles::ensure_default(&pool).await.unwrap();
+    // Un enregistreur est abonné pour vérifier les événements publiés.
     let bus = Arc::new(EventBus::new());
     let recorder = Arc::new(Recorder::default());
     bus.subscribe(recorder.clone());

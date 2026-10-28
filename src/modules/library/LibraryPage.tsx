@@ -1,3 +1,5 @@
+/** Page Bibliothèque. */
+
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
@@ -6,10 +8,13 @@ import { commands, unwrap, type TextSummary } from '@/shared/api';
 import { Button } from '@/shared/ui/button';
 import { Card, CardTitle } from '@/shared/ui/card';
 
+/** Langues proposées pour un texte. */
 const LANGUAGES = ['fr', 'en'] as const;
+/** Classes d'un champ de saisie. */
 const inputClass =
   'rounded-md border border-border bg-background px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
+/** Message lisible d'une erreur, qu'elle vienne du backend (`ApiError`) ou d'ailleurs. */
 function messageOf(e: unknown): string {
   return typeof e === 'object' && e !== null && 'message' in e ? String(e.message) : String(e);
 }
@@ -26,6 +31,7 @@ function parseTags(raw: string): string[] {
 export default function LibraryPage() {
   const { t, i18n } = useTranslation('library');
   const id = useId();
+  // Liste des textes (`null` pendant le chargement), erreur et état du formulaire.
   const [texts, setTexts] = useState<TextSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState('');
@@ -35,6 +41,7 @@ export default function LibraryPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
 
+  /** Recharge la liste après un ajout. */
   const refresh = useCallback(
     () =>
       unwrap(commands.listTexts())
@@ -43,6 +50,7 @@ export default function LibraryPage() {
     [],
   );
 
+  // Chargement initial ; `active` ignore une réponse arrivée après le démontage.
   useEffect(() => {
     let active = true;
     unwrap(commands.listTexts())
@@ -53,7 +61,9 @@ export default function LibraryPage() {
     };
   }, []);
 
+  /** Enregistre le texte collé, vide le formulaire et confirme l'ajout. */
   const submit = async (e: FormEvent) => {
+    // Pas de rechargement de page ; on efface les messages précédents.
     e.preventDefault();
     setSaving(true);
     setError(null);
@@ -62,6 +72,7 @@ export default function LibraryPage() {
       const text = await unwrap(
         commands.createText({ title, content, tags: parseTags(tags), language }),
       );
+      // Succès : formulaire vidé, confirmation, liste rechargée.
       setTitle('');
       setContent('');
       setTags('');
@@ -74,12 +85,14 @@ export default function LibraryPage() {
     }
   };
 
+  // Dates affichées selon la langue de l'interface.
   const dateFormat = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' });
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <h1 className="text-2xl font-semibold">{t('title')}</h1>
 
+      {/* Formulaire de collage (F-20). */}
       <Card>
         <CardTitle>{t('paste.title')}</CardTitle>
         <form className="flex flex-col gap-4" onSubmit={(e) => void submit(e)}>
@@ -135,6 +148,7 @@ export default function LibraryPage() {
             <Button type="submit" disabled={saving}>
               {t('paste.submit')}
             </Button>
+            {/* Confirmation annoncée par les lecteurs d'écran. */}
             {saved && (
               <p role="status" className="text-sm text-muted-foreground">
                 {t('paste.saved', { title: saved })}
@@ -150,6 +164,7 @@ export default function LibraryPage() {
         </p>
       )}
 
+      {/* Liste des textes, du plus récent au plus ancien, avec un lien d'entraînement. */}
       <section aria-labelledby={`${id}-list`} className="flex flex-col gap-3">
         <h2 id={`${id}-list`} className="text-lg font-semibold">
           {t('list.title')}

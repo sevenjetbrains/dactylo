@@ -7,19 +7,33 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 
 /** Commands */
 export const commands = {
+	/**  Renvoie le nom et la version de l'application. */
 	appInfo: () => __TAURI_INVOKE<AppInfo>("app_info"),
+	/**  Renvoie le profil actif. */
 	currentProfile: () => typedError<Profile, ApiError>(__TAURI_INVOKE("current_profile")),
+	/**  Commande : ajoute un texte collé à la bibliothèque (F-20). */
 	createText: (input: NewText) => typedError<TextSummary, ApiError>(__TAURI_INVOKE("create_text", { input })),
+	/**  Commande : liste les textes de la bibliothèque. */
 	listTexts: () => typedError<TextSummary[], ApiError>(__TAURI_INVOKE("list_texts")),
+	/**  Commande : lit les réglages du mode Copie. */
 	getPracticeSettings: () => typedError<PracticeSettings_Serialize, ApiError>(__TAURI_INVOKE("get_practice_settings")),
+	/**  Commande : enregistre les réglages du mode Copie. */
 	savePracticeSettings: (settings: PracticeSettings_Deserialize) => typedError<PracticeSettings_Serialize, ApiError>(__TAURI_INVOKE("save_practice_settings", { settings })),
+	/**  Commande : démarre une session de copie. */
 	startSession: (textId: string | null) => typedError<SessionStart_Serialize, ApiError>(__TAURI_INVOKE("start_session", { textId })),
+	/**  Commande : enregistre un lot de frappes (F-31). */
 	recordKeystrokes: (sessionId: string, keystrokes: Keystroke_Deserialize[]) => typedError<number | null, ApiError>(__TAURI_INVOKE("record_keystrokes", { sessionId, keystrokes })),
+	/**  Commande : clôt la session et renvoie le résumé (F-30, F-32). */
 	finishSession: (sessionId: string, activeMs: number) => typedError<SessionSummary_Serialize, ApiError>(__TAURI_INVOKE("finish_session", { sessionId, activeMs })),
+	/**  Commande : abandonne une session. */
 	abandonSession: (sessionId: string) => typedError<null, ApiError>(__TAURI_INVOKE("abandon_session", { sessionId })),
+	/**  Commande : session à reprendre, s'il y en a une. */
 	pendingSession: () => typedError<PendingSession | null, ApiError>(__TAURI_INVOKE("pending_session")),
+	/**  Commande : reprend une session interrompue. */
 	resumeSession: (sessionId: string) => typedError<SessionStart_Serialize, ApiError>(__TAURI_INVOKE("resume_session", { sessionId })),
+	/**  Commande : découpe le texte de la session en lignes. */
 	wrapText: (sessionId: string, columns: number) => typedError<number[], ApiError>(__TAURI_INVOKE("wrap_text", { sessionId, columns })),
+	/**  Commande : texte suivant dans la bibliothèque (Ctrl+Entrée, F-07). */
 	nextTextId: (textId: string) => typedError<string | null, ApiError>(__TAURI_INVOKE("next_text_id", { textId })),
 };
 
@@ -30,24 +44,37 @@ export const events = {
 
 /* Types */
 /**  Position de la ligne active dans la zone de frappe (F-03). */
-export type ActiveLine = "top" | "center";
+export type ActiveLine = 
+/**  La ligne en cours reste en haut de la zone. */
+"top" | 
+/**  La ligne en cours reste au milieu de la zone. */
+"center";
 
 /**  Forme sérialisée de `AppError`, décrite pour specta. */
 export type ApiError = {
+	/**  Code stable. */
 	code: ErrorCode,
+	/**  Message lisible, en français. */
 	message: string,
 };
 
+/**  Nom et version de l'application. */
 export type AppInfo = {
+	/**  Nom affiché. */
 	name: string,
+	/**  Version du paquet Cargo. */
 	version: string,
 };
 
 /**  Moyenne de sessions passées, pour la comparaison de l'écran de fin (F-32). */
 export type AverageStats = {
+	/**  Nombre de sessions prises en compte. */
 	sessions: number,
+	/**  MPM net moyen. */
 	wpmNet: number | null,
+	/**  CPM moyen. */
 	cpm: number | null,
+	/**  Précision moyenne, en %. */
 	accuracy: number | null,
 };
 
@@ -61,16 +88,39 @@ export type CorrectionMode =
 /**  Événement métier émis par un module. */
 export type DomainEvent = 
 /**  Une session est terminée et ses statistiques sont calculées. */
-{ type: "sessionCompleted"; sessionId: string; profileId: string } | 
+{ type: "sessionCompleted"; 
+/**  Identifiant de la session terminée. */
+sessionId: string; 
+/**  Profil qui a joué la session. */
+profileId: string } | 
 /**  Un mot a été mal écrit pendant une session. */
-{ type: "wordMistyped"; sessionId: string; profileId: string; expected: string; typed: string } | 
+{ type: "wordMistyped"; 
+/**  Session pendant laquelle la faute a eu lieu. */
+sessionId: string; 
+/**  Profil qui a fait la faute. */
+profileId: string; 
+/**  Mot attendu, tel qu'il figure dans le texte. */
+expected: string; 
+/**  Mot effectivement tapé. */
+typed: string } | 
 /**  Un texte a été ajouté à la bibliothèque. */
-{ type: "textImported"; textId: string };
+{ type: "textImported"; 
+/**  Identifiant du texte ajouté. */
+textId: string };
 
 /**  Événement Tauri typé portant un `DomainEvent` ; les modules React s'y abonnent. */
 export type DomainEventPayload = DomainEvent;
 
-export type ErrorCode = "database" | "migration" | "notFound" | "invalid";
+/**  Code d'erreur stable, sur lequel l'interface peut s'appuyer. */
+export type ErrorCode = 
+/**  Erreur SQLite. */
+"database" | 
+/**  Erreur de migration. */
+"migration" | 
+/**  Enregistrement introuvable. */
+"notFound" | 
+/**  Donnée invalide. */
+"invalid";
 
 /**
  *  Type de faute ; valeurs identiques à la contrainte `session_errors.error_type`.
@@ -79,10 +129,32 @@ export type ErrorCode = "database" | "migration" | "notFound" | "invalid";
  *  `Punctuation` et `Substitution` ; les autres viennent de l'alignement
  *  mot à mot de la dictée (F-16, Phase 4).
  */
-export type ErrorType = "accent" | "missing_letter" | "extra_letter" | "transposition" | "substitution" | "missing_word" | "extra_word" | "punctuation" | "case";
+export type ErrorType = 
+/**  Accent oublié, ajouté ou erroné (« e » pour « ê »). */
+"accent" | 
+/**  Lettre manquante (dictée). */
+"missing_letter" | 
+/**  Lettre en trop (dictée). */
+"extra_letter" | 
+/**  Deux lettres inversées (dictée). */
+"transposition" | 
+/**  Un caractère à la place d'un autre. */
+"substitution" | 
+/**  Mot oublié (dictée). */
+"missing_word" | 
+/**  Mot en trop (dictée). */
+"extra_word" | 
+/**  Ponctuation erronée. */
+"punctuation" | 
+/**  Majuscule ou minuscule erronée. */
+"case";
 
 /**  Nature d'une frappe. */
-export type KeyKind = "insert" | "delete";
+export type KeyKind = 
+/**  Saisie d'un graphème. */
+"insert" | 
+/**  Retour arrière. */
+"delete";
 
 /**  Frappe brute envoyée par l'interface. */
 export type Keystroke = Keystroke_Serialize | Keystroke_Deserialize;
@@ -91,6 +163,7 @@ export type Keystroke = Keystroke_Serialize | Keystroke_Deserialize;
 export type Keystroke_Deserialize = {
 	/**  Numéro d'ordre, croissant à partir de 0. */
 	seq: number,
+	/**  Insertion ou retour arrière. */
 	kind: KeyKind,
 	/**  Graphème tapé (insertion uniquement). */
 	typed?: string | null,
@@ -102,6 +175,7 @@ export type Keystroke_Deserialize = {
 export type Keystroke_Serialize = {
 	/**  Numéro d'ordre, croissant à partir de 0. */
 	seq: number,
+	/**  Insertion ou retour arrière. */
 	kind: KeyKind,
 	/**  Graphème tapé (insertion uniquement). */
 	typed: string | null,
@@ -111,18 +185,25 @@ export type Keystroke_Serialize = {
 
 /**  Texte saisi par l'utilisateur (F-20). */
 export type NewText = {
+	/**  Titre, obligatoire. */
 	title: string,
+	/**  Contenu, obligatoire. */
 	content: string,
+	/**  Catégorie et étiquettes libres. */
 	tags: string[],
+	/**  Code de langue (« fr » si vide). */
 	language: string,
 };
 
 /**  Session interrompue proposée à la reprise (NF-06). */
 export type PendingSession = {
+	/**  Identifiant de la session. */
 	sessionId: string,
+	/**  Titre du texte. */
 	title: string,
 	/**  Avancement, de 0 à 1. */
 	progress: number | null,
+	/**  Début, en ms Unix. */
 	startedAt: number,
 };
 
@@ -135,12 +216,17 @@ export type PracticeSettings_Deserialize = {
 	fontSize?: number,
 	/**  Lignes visibles (F-03). */
 	visibleLines?: number,
+	/**  Position de la ligne active, en haut ou au centre (F-03). */
 	activeLine?: ActiveLine,
+	/**  Mode de correction, bloquant ou libre (F-04). */
 	correction?: CorrectionMode,
+	/**  Retour arrière autorisé ou non (F-04). */
 	backspaceAllowed?: boolean,
 	/**  Bandeau MPM / précision / temps / progression (F-05). */
 	showBanner?: boolean,
+	/**  Tolère les variantes typographiques (apostrophe courbe, espace insécable…). */
 	lenientPunctuation?: boolean,
+	/**  Type de session (F-06). */
 	goal?: SessionGoal,
 };
 
@@ -150,19 +236,29 @@ export type PracticeSettings_Serialize = {
 	fontSize: number,
 	/**  Lignes visibles (F-03). */
 	visibleLines: number,
+	/**  Position de la ligne active, en haut ou au centre (F-03). */
 	activeLine: ActiveLine,
+	/**  Mode de correction, bloquant ou libre (F-04). */
 	correction: CorrectionMode,
+	/**  Retour arrière autorisé ou non (F-04). */
 	backspaceAllowed: boolean,
 	/**  Bandeau MPM / précision / temps / progression (F-05). */
 	showBanner: boolean,
+	/**  Tolère les variantes typographiques (apostrophe courbe, espace insécable…). */
 	lenientPunctuation: boolean,
+	/**  Type de session (F-06). */
 	goal: SessionGoal,
 };
 
+/**  Profil utilisateur. */
 export type Profile = {
+	/**  Identifiant UUIDv7. */
 	id: string,
+	/**  Nom affiché. */
 	name: string,
+	/**  Disposition du clavier (« azerty » par défaut). */
 	keyboardLayout: string,
+	/**  Date de création, en ms Unix. */
 	createdAt: number,
 };
 
@@ -171,20 +267,28 @@ export type SessionGoal =
 /**  Jusqu'au dernier caractère du texte. */
 { type: "wholeText" } | 
 /**  Durée fixe, en minutes. */
-{ type: "duration"; minutes: number } | 
+{ type: "duration"; 
+/**  Durée de la session, en minutes. */
+minutes: number } | 
 /**  Nombre de mots fixe. */
-{ type: "words"; count: number };
+{ type: "words"; 
+/**  Nombre de mots à taper. */
+count: number };
 
 /**  Tout ce qu'il faut à l'interface pour afficher une session. */
 export type SessionStart = SessionStart_Serialize | SessionStart_Deserialize;
 
 /**  Tout ce qu'il faut à l'interface pour afficher une session. */
 export type SessionStart_Deserialize = {
+	/**  Identifiant de la session. */
 	sessionId: string,
+	/**  Texte tapé. */
 	textId: string,
+	/**  Titre du texte. */
 	title: string,
 	/**  Texte découpé en graphèmes : les positions des deux côtés coïncident (ADR 0008). */
 	graphemes: string[],
+	/**  Bornes des mots, pour l'objectif « nombre de mots ». */
 	words: WordSpan[],
 	/**  Réglages figés pour la session. */
 	settings: PracticeSettings_Deserialize,
@@ -196,11 +300,15 @@ export type SessionStart_Deserialize = {
 
 /**  Tout ce qu'il faut à l'interface pour afficher une session. */
 export type SessionStart_Serialize = {
+	/**  Identifiant de la session. */
 	sessionId: string,
+	/**  Texte tapé. */
 	textId: string,
+	/**  Titre du texte. */
 	title: string,
 	/**  Texte découpé en graphèmes : les positions des deux côtés coïncident (ADR 0008). */
 	graphemes: string[],
+	/**  Bornes des mots, pour l'objectif « nombre de mots ». */
 	words: WordSpan[],
 	/**  Réglages figés pour la session. */
 	settings: PracticeSettings_Serialize,
@@ -220,8 +328,11 @@ export type SessionStats = {
 	errors: number,
 	/**  Caractères encore faux à la fin. */
 	uncorrected: number,
+	/**  Mots par minute bruts : toutes les frappes, justes ou non. */
 	wpmRaw: number | null,
+	/**  Mots par minute nets : brut moins les erreurs non corrigées. */
 	wpmNet: number | null,
+	/**  Caractères justes par minute. */
 	cpm: number | null,
 	/**  En %, de 0 à 100. */
 	accuracy: number | null,
@@ -232,9 +343,13 @@ export type SessionSummary = SessionSummary_Serialize | SessionSummary_Deseriali
 
 /**  Résumé de l'écran de fin (F-32). */
 export type SessionSummary_Deserialize = {
+	/**  Identifiant de la session. */
 	sessionId: string,
+	/**  Texte tapé, pour enchaîner sur le suivant. */
 	textId: string,
+	/**  Chiffres de la session. */
 	stats: SessionStats,
+	/**  Mots et caractères fautifs. */
 	errors: TypingError[],
 	/**  Moyenne des dernières sessions, hors celle-ci ; `None` pour la première. */
 	average?: AverageStats | null,
@@ -242,9 +357,13 @@ export type SessionSummary_Deserialize = {
 
 /**  Résumé de l'écran de fin (F-32). */
 export type SessionSummary_Serialize = {
+	/**  Identifiant de la session. */
 	sessionId: string,
+	/**  Texte tapé, pour enchaîner sur le suivant. */
 	textId: string,
+	/**  Chiffres de la session. */
 	stats: SessionStats,
+	/**  Mots et caractères fautifs. */
 	errors: TypingError[],
 	/**  Moyenne des dernières sessions, hors celle-ci ; `None` pour la première. */
 	average: AverageStats | null,
@@ -252,12 +371,17 @@ export type SessionSummary_Serialize = {
 
 /**  Entrée de la liste de la bibliothèque. */
 export type TextSummary = {
+	/**  Identifiant UUIDv7. */
 	id: string,
+	/**  Titre. */
 	title: string,
+	/**  Code de langue. */
 	language: string,
+	/**  Étiquettes triées, sans doublon. */
 	tags: string[],
 	/**  Nombre de caractères du contenu. */
 	length: number,
+	/**  Date d'ajout, en ms Unix. */
 	createdAt: number,
 };
 
@@ -267,6 +391,7 @@ export type TypingError = {
 	expected: string,
 	/**  Forme tapée au premier passage. */
 	typed: string,
+	/**  Type de faute (le plus fréquent du mot). */
 	errorType: ErrorType,
 	/**  Index du premier graphème concerné. */
 	position: number,
@@ -276,7 +401,9 @@ export type TypingError = {
 
 /**  Bornes d'un mot dans le texte : `[start, end[` en indices de graphèmes. */
 export type WordSpan = {
+	/**  Indice du premier graphème du mot. */
 	start: number,
+	/**  Indice qui suit le dernier graphème du mot (borne exclue). */
 	end: number,
 };
 

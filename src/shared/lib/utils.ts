@@ -1,3 +1,5 @@
+/** Petits utilitaires partagés par les composants. */
+
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 

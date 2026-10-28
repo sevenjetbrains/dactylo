@@ -1,3 +1,5 @@
+/** Tests de l'écran de fin de session. */
+
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
@@ -8,6 +10,7 @@ import type { SessionSummary_Serialize as Summary } from '@/shared/api';
 import { formatDuration } from './format';
 import { SessionSummary } from './SessionSummary';
 
+/** Résumé type : une faute de mot, une de ponctuation, et une moyenne sur 10 sessions. */
 const summary: Summary = {
   sessionId: 's1',
   textId: 't1',
@@ -28,6 +31,7 @@ const summary: Summary = {
   average: { sessions: 10, wpmNet: 50, cpm: 280, accuracy: 98 },
 };
 
+/** Rend l'écran de fin et renvoie les deux rappels espions. */
 function renderSummary(s: Summary = summary) {
   const onRestart = vi.fn();
   const onNext = vi.fn();
@@ -51,6 +55,7 @@ describe('SessionSummary (F-32)', () => {
   it('compare à la moyenne des 10 dernières sessions', () => {
     renderSummary();
     expect(screen.getByText(/moyenne de vos 10 dernières sessions/)).toBeInTheDocument();
+    // MPM au-dessus, CPM en dessous, précision égale.
     expect(screen.getByText('+4 par rapport à la moyenne')).toBeInTheDocument();
     expect(screen.getByText('−10 par rapport à la moyenne')).toBeInTheDocument();
     expect(screen.getByText('±0 % par rapport à la moyenne')).toBeInTheDocument();

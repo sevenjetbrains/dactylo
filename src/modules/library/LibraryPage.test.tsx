@@ -1,3 +1,5 @@
+/** Tests de la page Bibliothèque. */
+
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
@@ -5,9 +7,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import LibraryPage from './LibraryPage';
 
+/** Réponse simulée de la liste des textes. */
 const listTexts = vi.fn();
+/** Réponse simulée de l'ajout d'un texte. */
 const createText = vi.fn();
 
+// Client simulé ; `unwrap` reproduit le vrai comportement (rejet en cas d'erreur).
 vi.mock('@/shared/api', () => ({
   commands: {
     listTexts: () => listTexts(),
@@ -20,6 +25,7 @@ vi.mock('@/shared/api', () => ({
   },
 }));
 
+/** Texte d'exemple renvoyé par le backend. */
 const loup = {
   id: 't1',
   title: 'Le loup',
@@ -29,6 +35,7 @@ const loup = {
   createdAt: Date.UTC(2026, 9, 28),
 };
 
+/** Rend la bibliothèque dans un routeur en mémoire. */
 function renderLibrary() {
   return render(
     <MemoryRouter>
@@ -50,6 +57,7 @@ describe('LibraryPage', () => {
   });
 
   it('ajoute un texte collé avec ses étiquettes (F-20)', async () => {
+    // Liste vide au chargement, puis le texte ajouté après l'enregistrement.
     listTexts
       .mockResolvedValueOnce({ status: 'ok', data: [] })
       .mockResolvedValueOnce({ status: 'ok', data: [loup] });
@@ -57,17 +65,20 @@ describe('LibraryPage', () => {
     renderLibrary();
     const user = userEvent.setup();
 
+    // Remplissage du formulaire ; les étiquettes contiennent un vide et des espaces.
     await user.type(screen.getByLabelText('Titre'), 'Le loup');
     await user.type(screen.getByLabelText('Texte (collez-le ici)'), 'Il était une fois.');
     await user.type(screen.getByLabelText('Étiquettes'), 'conte, , loup ');
     await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
+    // Étiquettes nettoyées avant l'envoi.
     expect(createText).toHaveBeenCalledWith({
       title: 'Le loup',
       content: 'Il était une fois.',
       tags: ['conte', 'loup'],
       language: 'fr',
     });
+    // Confirmation, lien d'entraînement et formulaire vidé.
     expect(await screen.findByRole('status')).toHaveTextContent('« Le loup » a été ajouté.');
     expect(screen.getByRole('link', { name: "S'entraîner sur « Le loup »" })).toHaveAttribute(
       'href',

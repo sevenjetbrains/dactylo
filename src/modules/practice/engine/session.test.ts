@@ -1,3 +1,5 @@
+/** Tests du miroir TypeScript de la comparaison de frappe. */
+
 import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
@@ -13,6 +15,7 @@ import {
   type Rules,
 } from './session';
 
+/** Cas partagé ; même format que côté Rust. */
 interface Case {
   name: string;
   text: string;
@@ -34,14 +37,17 @@ const fixture = JSON.parse(
   readFileSync('crates/core/tests/fixtures/typing-cases.json', 'utf8'),
 ) as { cases: Case[] };
 
+/** Convertit une touche du fichier de cas (`⌫` = retour arrière) en frappe brute. */
 const toKey = (k: string): RawKey =>
   k === '⌫' ? { kind: 'delete' } : { kind: 'insert', typed: k };
 
+/** Règles par défaut : mode libre. */
 const free: Rules = { correction: 'free', backspaceAllowed: true, lenientPunctuation: true };
 
 describe('miroir TS de TypingSession', () => {
   it.each(fixture.cases.map((c) => [c.name, c] as const))('%s', (_, c) => {
     const engine = new TypingEngine(splitGraphemes(c.text.normalize('NFC')), c.rules);
+    // Les frappes sont appliquées en comptant les refusées, puis tout est comparé.
     const rejected = c.keys.filter((k) => !engine.apply(toKey(k))).length;
     expect(engine.position).toBe(c.expected.position);
     expect(engine.cellCodes()).toBe(c.expected.cells);
@@ -63,6 +69,7 @@ describe('miroir TS de TypingSession', () => {
   });
 
   it('atteint les objectifs de session', () => {
+    // Premier mot « ab » tapé.
     const engine = new TypingEngine(splitGraphemes('ab cd'), free);
     const words = [
       { start: 0, end: 2 },
@@ -79,6 +86,7 @@ describe('miroir TS de TypingSession', () => {
   });
 
   it('calcule le bandeau avec les formules du cœur', () => {
+    // Mêmes chiffres que le test Rust `uncorrected_errors_lower_net_speed`.
     const counters = { inserts: 100, correctInserts: 90, correctCells: 86, uncorrected: 4 };
     const live = liveStats(counters, 30_000, { type: 'wholeText' }, 50, 200);
     expect(live.wpm).toBe(32);
@@ -87,6 +95,7 @@ describe('miroir TS de TypingSession', () => {
     expect(liveStats(counters, 15_000, { type: 'duration', minutes: 1 }, 0, 10).progress).toBe(
       0.25,
     );
+    // Sans frappe ni texte : 0 MPM, 100 % de précision, progression complète.
     const empty = { inserts: 0, correctInserts: 0, correctCells: 0, uncorrected: 0 };
     expect(liveStats(empty, 0, { type: 'wholeText' }, 0, 0)).toEqual({
       wpm: 0,
@@ -96,6 +105,7 @@ describe('miroir TS de TypingSession', () => {
   });
 
   it('traite une frappe en moins de 16 ms sur un texte de 10 000 mots (NF-01)', () => {
+    // 10 000 mots ; on mesure le temps moyen des 1 000 premières frappes.
     const text = splitGraphemes('anticonstitutionnellement '.repeat(10_000));
     const engine = new TypingEngine(text, free);
     const start = performance.now();

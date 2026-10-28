@@ -1,12 +1,17 @@
+/** Tests de la page d'accueil. */
+
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import HomePage from './HomePage';
 
+/** Réponse simulée de `currentProfile`. */
 const currentProfile = vi.fn();
+/** Réponse simulée de `pendingSession`. */
 const pendingSession = vi.fn();
 
+// Client simulé ; `unwrap` reproduit le vrai comportement (rejet en cas d'erreur).
 vi.mock('@/shared/api', () => ({
   commands: {
     currentProfile: () => currentProfile(),
@@ -19,8 +24,10 @@ vi.mock('@/shared/api', () => ({
   },
 }));
 
+/** Profil par défaut renvoyé par le backend simulé. */
 const profile = { id: '1', name: 'Par défaut', keyboardLayout: 'azerty', createdAt: 0 };
 
+/** Rend l'accueil dans un routeur en mémoire (les liens en ont besoin). */
 function renderHome() {
   return render(
     <MemoryRouter>
@@ -30,6 +37,7 @@ function renderHome() {
 }
 
 describe('HomePage', () => {
+  // Par défaut : profil chargé, aucune session à reprendre.
   beforeEach(() => {
     currentProfile.mockResolvedValue({ status: 'ok', data: profile });
     pendingSession.mockResolvedValue({ status: 'ok', data: null });
@@ -45,6 +53,7 @@ describe('HomePage', () => {
       'href',
       '/library',
     );
+    // Pas de carte de reprise sans session interrompue.
     expect(screen.queryByText('Reprendre la session')).not.toBeInTheDocument();
   });
 

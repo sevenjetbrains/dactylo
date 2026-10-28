@@ -7,9 +7,12 @@ import type { Page } from '@playwright/test';
  */
 export async function installFakeBackend(page: Page) {
   await page.addInitScript(() => {
+    /** Frappe brute telle qu'envoyée par l'interface. */
     type Key = { seq: number; kind: 'insert' | 'delete'; typed: string | null; tMs: number };
+    // Découpage en graphèmes, comme le cœur Rust.
     const segmenter = new Intl.Segmenter('fr', { granularity: 'grapheme' });
     const split = (s: string) => Array.from(segmenter.segment(s), (x) => x.segment);
+    // « Base » en mémoire : textes, sessions et réglages par défaut.
     const texts: { id: string; title: string; content: string; createdAt: number }[] = [];
     const sessions = new Map<string, { textId: string; keys: Key[] }>();
     const settings = {
@@ -22,8 +25,10 @@ export async function installFakeBackend(page: Page) {
       lenientPunctuation: true,
       goal: { type: 'wholeText' },
     };
+    /** Compteur pour fabriquer des identifiants uniques. */
     let counter = 0;
 
+    /** Résumé d'un texte, au format de `TextSummary`. */
     const summary = (t: (typeof texts)[number]) => ({
       id: t.id,
       title: t.title,
@@ -33,6 +38,7 @@ export async function installFakeBackend(page: Page) {
       createdAt: t.createdAt,
     });
 
+    /** Une fonction par commande Tauri, nommée comme côté Rust. */
     const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
       app_info: () => ({ name: 'Dactylo', version: '0.1.0' }),
       current_profile: () => ({
@@ -44,6 +50,7 @@ export async function installFakeBackend(page: Page) {
       pending_session: () => null,
       get_practice_settings: () => settings,
       save_practice_settings: (a) => a.settings,
+      // Du plus récent au plus ancien, comme la vraie bibliothèque.
       list_texts: () => [...texts].reverse().map(summary),
       create_text: (a) => {
         const input = a.input as { title: string; content: string };
@@ -57,11 +64,13 @@ export async function installFakeBackend(page: Page) {
         return summary(text);
       },
       start_session: (a) => {
+        // Texte demandé, sinon le plus récent.
         const text = texts.find((t) => t.id === a.textId) ?? texts.at(-1);
         if (!text) throw { code: 'notFound', message: 'aucun texte dans la bibliothèque' };
         const sessionId = `s${++counter}`;
         sessions.set(sessionId, { textId: text.id, keys: [] });
         const graphemes = split(text.content);
+        // Mots : suites de lettres ou chiffres (version simplifiée de `word_spans`).
         const words: { start: number; end: number }[] = [];
         graphemes.forEach((g, i) => {
           const isWord = /\p{L}|\p{N}/u.test(g);
@@ -80,6 +89,7 @@ export async function installFakeBackend(page: Page) {
           activeMs: 0,
         };
       },
+      // Une seule ligne : la mise en page n'est pas testée ici.
       wrap_text: () => [0],
       record_keystrokes: (a) => {
         const keys = a.keystrokes as Key[];
@@ -90,6 +100,7 @@ export async function installFakeBackend(page: Page) {
         const session = sessions.get(a.sessionId as string);
         if (!session) throw { code: 'notFound', message: 'session' };
         const text = split(texts.find((t) => t.id === session.textId)?.content ?? '');
+        // Statistiques simplistes : une insertion est fausse si elle diffère du texte à son rang.
         const inserts = session.keys.filter((k) => k.kind === 'insert');
         const wrong = inserts.filter((k, i) => k.typed !== text[i]).length;
         const minutes = Math.max(Number(a.activeMs), 1) / 60_000;
@@ -106,6 +117,7 @@ export async function installFakeBackend(page: Page) {
             cpm: (inserts.length - wrong) / minutes,
             accuracy: (100 * (inserts.length - wrong)) / Math.max(inserts.length, 1),
           },
+          // Faute codée en dur pour le scénario « la forêt ».
           errors: wrong
             ? [{ expected: 'forêt', typed: 'foret', errorType: 'accent', position: 3, word: true }]
             : [],
@@ -119,6 +131,7 @@ export async function installFakeBackend(page: Page) {
       next_text_id: () => null,
     };
 
+    // Remplace le pont IPC que Tauri injecte normalement dans la WebView.
     Object.assign(window, {
       __TAURI_INTERNALS__: {
         invoke: async (cmd: string, args: Record<string, unknown> = {}) => {

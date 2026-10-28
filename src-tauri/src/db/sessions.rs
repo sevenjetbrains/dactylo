@@ -10,12 +10,18 @@ use crate::error::{AppError, AppResult};
 /// Mode d'entraînement, valeur de `sessions.mode`.
 pub const MODE_COPY: &str = "copy";
 
+/// Ligne de la table `sessions` utile au mode Copie.
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct SessionRow {
+    /// Identifiant UUIDv7.
     pub id: String,
+    /// Profil qui joue la session.
     pub profile_id: String,
+    /// Texte tapé (absent pour une dictée libre, plus tard).
     pub text_id: Option<String>,
+    /// Début, en ms Unix.
     pub started_at: i64,
+    /// Fin, en ms Unix ; `None` tant que la session est en cours.
     pub ended_at: Option<i64>,
     /// Réglages utilisés (JSON).
     pub settings: String,
@@ -29,11 +35,13 @@ pub async fn start(
     text_id: &str,
     settings_json: &str,
 ) -> AppResult<SessionRow> {
+    // Suppression et création dans la même transaction : jamais deux sessions en cours.
     let mut tx = pool.begin().await?;
     sqlx::query("DELETE FROM sessions WHERE profile_id = ? AND ended_at IS NULL")
         .bind(profile_id)
         .execute(&mut *tx)
         .await?;
+    // Nouvelle session, sans date de fin.
     let row = SessionRow {
         id: new_id(),
         profile_id: profile_id.to_owned(),
@@ -58,6 +66,7 @@ pub async fn start(
     Ok(row)
 }
 
+/// Lit une session ; `NotFound` si elle n'existe pas.
 pub async fn get(pool: &SqlitePool, id: &str) -> AppResult<SessionRow> {
     sqlx::query_as(
         "SELECT id, profile_id, text_id, started_at, ended_at, settings FROM sessions WHERE id = ?",
@@ -86,8 +95,10 @@ pub async fn insert_keystrokes(
     session_id: &str,
     keystrokes: &[ResolvedKeystroke],
 ) -> AppResult<()> {
+    // Une seule transaction pour tout le lot : bien plus rapide qu'une par frappe.
     let mut tx = pool.begin().await?;
     for k in keystrokes {
+        // `OR IGNORE` : un lot renvoyé après une coupure ne crée pas de doublon.
         sqlx::query(
             "INSERT OR IGNORE INTO keystrokes \
              (session_id, seq, position, kind, expected, typed, t_ms, correct) \
@@ -108,11 +119,16 @@ pub async fn insert_keystrokes(
     Ok(())
 }
 
+/// Ligne brute de la table `keystrokes`, réduite à ce qu'il faut pour rejouer.
 #[derive(sqlx::FromRow)]
 struct KeystrokeRow {
+    /// Numéro d'ordre.
     seq: u32,
+    /// « insert » ou « delete ».
     kind: String,
+    /// Graphème tapé.
     typed: Option<String>,
+    /// Temps actif, en ms.
     t_ms: u32,
 }
 
@@ -124,6 +140,7 @@ pub async fn keystrokes(pool: &SqlitePool, session_id: &str) -> AppResult<Vec<Ke
     .bind(session_id)
     .fetch_all(pool)
     .await?;
+    // Reconversion en frappes brutes ; toute valeur autre que « delete » est une insertion.
     Ok(rows
         .into_iter()
         .map(|r| Keystroke {
@@ -146,7 +163,9 @@ pub async fn finish(
     stats: &SessionStats,
     errors: &[TypingError],
 ) -> AppResult<()> {
+    // Statistiques et fautes sont écrites ensemble ou pas du tout.
     let mut tx = pool.begin().await?;
+    // `ended_at IS NULL` empêche de clore deux fois la même session.
     let updated = sqlx::query(
         "UPDATE sessions SET ended_at = ?, duration_ms = ?, wpm_raw = ?, wpm_net = ?, \
          cpm = ?, accuracy = ? WHERE id = ? AND ended_at IS NULL",
@@ -165,6 +184,7 @@ pub async fn finish(
             "session {session_id} déjà terminée"
         )));
     }
+    // Une ligne par faute relevée.
     for e in errors {
         sqlx::query(
             "INSERT INTO session_errors (session_id, expected_word, typed_word, error_type, position) \
@@ -182,6 +202,7 @@ pub async fn finish(
     Ok(())
 }
 
+/// Supprime une session (abandon) ; ses frappes et fautes partent en cascade.
 pub async fn delete(pool: &SqlitePool, session_id: &str) -> AppResult<()> {
     sqlx::query("DELETE FROM sessions WHERE id = ?")
         .bind(session_id)
@@ -190,12 +211,18 @@ pub async fn delete(pool: &SqlitePool, session_id: &str) -> AppResult<()> {
     Ok(())
 }
 
+/// Statistiques stockées d'une session terminée.
 #[derive(sqlx::FromRow)]
 struct StatsRow {
+    /// Temps actif, en ms.
     duration_ms: u32,
+    /// MPM brut.
     wpm_raw: f64,
+    /// MPM net.
     wpm_net: f64,
+    /// CPM.
     cpm: f64,
+    /// Précision, en %.
     accuracy: f64,
 }
 
@@ -217,6 +244,7 @@ pub async fn recent_stats(
     .bind(limit)
     .fetch_all(pool)
     .await?;
+    // Les compteurs ne sont pas stockés : ils restent à zéro, seule la moyenne compte.
     Ok(rows
         .into_iter()
         .map(|r| SessionStats {
@@ -230,6 +258,7 @@ pub async fn recent_stats(
         .collect())
 }
 
+/// Tests du dépôt des sessions.
 #[cfg(test)]
 mod tests {
     use dactylo_core::typing::ErrorType;
@@ -238,6 +267,7 @@ mod tests {
     use crate::db::texts::{self, NewText};
     use crate::db::{connect_in_memory, profiles};
 
+    /// Base en mémoire avec le profil par défaut et un texte « ab ».
     async fn setup() -> (SqlitePool, String, String) {
         let pool = connect_in_memory().await.unwrap();
         let profile = profiles::ensure_default(&pool).await.unwrap();
@@ -255,6 +285,7 @@ mod tests {
         (pool, profile.id, text.id)
     }
 
+    /// Insertion résolue numéro `seq`, à la position `seq`.
     fn resolved(seq: u32, typed: &str, correct: bool) -> ResolvedKeystroke {
         ResolvedKeystroke {
             seq,
@@ -267,6 +298,7 @@ mod tests {
         }
     }
 
+    /// Les frappes sont relues dans l'ordre ; un numéro déjà enregistré est ignoré.
     #[tokio::test]
     async fn keystrokes_round_trip_and_duplicates_are_ignored() {
         let (pool, profile, text) = setup().await;
@@ -274,6 +306,7 @@ mod tests {
         insert_keystrokes(&pool, &s.id, &[resolved(0, "a", true)])
             .await
             .unwrap();
+        // Second lot : le doublon du numéro 0 et un retour arrière.
         let delete = ResolvedKeystroke {
             kind: KeyKind::Delete,
             typed: None,
@@ -283,6 +316,7 @@ mod tests {
             .await
             .unwrap();
 
+        // La première version de la frappe 0 est conservée.
         let ks = keystrokes(&pool, &s.id).await.unwrap();
         assert_eq!(ks.len(), 2);
         assert_eq!(ks[0].typed.as_deref(), Some("a"), "le doublon est ignoré");
@@ -290,6 +324,7 @@ mod tests {
         assert_eq!(ks[1].t_ms, 100);
     }
 
+    /// Démarrer une session supprime la session en cours du même profil.
     #[tokio::test]
     async fn starting_a_session_replaces_the_unfinished_one() {
         let (pool, profile, text) = setup().await;
@@ -299,6 +334,7 @@ mod tests {
             first.id
         );
 
+        // La seconde session remplace la première.
         let second = start(&pool, &profile, &text, "{}").await.unwrap();
         assert!(matches!(
             get(&pool, &first.id).await,
@@ -309,10 +345,12 @@ mod tests {
             second.id
         );
 
+        // Après suppression, plus rien à reprendre.
         delete(&pool, &second.id).await.unwrap();
         assert!(pending(&pool, &profile).await.unwrap().is_none());
     }
 
+    /// Clore une session écrit statistiques et fautes, une seule fois.
     #[tokio::test]
     async fn finish_writes_stats_and_errors_once() {
         let (pool, profile, text) = setup().await;
@@ -333,9 +371,11 @@ mod tests {
         }];
         finish(&pool, &s.id, &stats, &errors).await.unwrap();
 
+        // La session est close et n'est plus proposée à la reprise.
         let row = get(&pool, &s.id).await.unwrap();
         assert!(row.ended_at.is_some());
         assert!(pending(&pool, &profile).await.unwrap().is_none());
+        // La faute est stockée avec son type en base.
         let stored: (String, String, String) = sqlx::query_as(
             "SELECT expected_word, typed_word, error_type FROM session_errors WHERE session_id = ?",
         )
@@ -345,12 +385,14 @@ mod tests {
         .unwrap();
         assert_eq!(stored, ("forêt".into(), "foret".into(), "accent".into()));
 
+        // Une seconde clôture est refusée.
         assert!(matches!(
             finish(&pool, &s.id, &stats, &[]).await,
             Err(AppError::Invalid(_))
         ));
     }
 
+    /// La moyenne exclut la session courante et les sessions non terminées.
     #[tokio::test]
     async fn recent_stats_excludes_current_and_unfinished_sessions() {
         let (pool, profile, text) = setup().await;
@@ -358,12 +400,14 @@ mod tests {
             wpm_net: wpm,
             ..SessionStats::default()
         };
+        // Deux sessions terminées (20 et 40 MPM), puis une en cours.
         let a = start(&pool, &profile, &text, "{}").await.unwrap();
         finish(&pool, &a.id, &stats(20.0), &[]).await.unwrap();
         let b = start(&pool, &profile, &text, "{}").await.unwrap();
         finish(&pool, &b.id, &stats(40.0), &[]).await.unwrap();
         start(&pool, &profile, &text, "{}").await.unwrap();
 
+        // En excluant B, seule A reste ; la limite est respectée.
         let recent = recent_stats(&pool, &profile, &b.id, 10).await.unwrap();
         assert_eq!(recent.len(), 1);
         assert_eq!(recent[0].wpm_net, 20.0);

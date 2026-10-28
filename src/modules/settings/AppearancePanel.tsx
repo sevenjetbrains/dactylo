@@ -1,9 +1,13 @@
+/** Panneau « Apparence » de la page Réglages. */
+
 import { useTranslation } from 'react-i18next';
 
 import { useThemeStore, type ThemePreference } from '@/shared/theme';
 
+/** Thèmes proposés, dans l'ordre d'affichage. */
 const THEMES: ThemePreference[] = ['light', 'dark', 'system'];
 
+/** Choix du thème : clair, sombre ou celui du système. */
 export function AppearancePanel() {
   const { t } = useTranslation('settings');
   const theme = useThemeStore((s) => s.theme);

@@ -43,3 +43,12 @@ Tailwind + shadcn/ui, Zustand, SQLite via sqlx, pdfjs-dist, crate tts, i18next.
 
 - Code et noms en anglais ; interface en français via i18n ;
   commentaires et docs en français.
+
+## Commentaires
+
+- Doc-commentaire (`//!`, `///`, `/** */`) sur chaque fichier, fonction,
+  type, champ et constante, publics ou privés, tests compris.
+- Un commentaire au-dessus de chaque bloc logique (boucle, condition,
+  étape d'un traitement) qui explique le pourquoi, pas la paraphrase.
+- Exceptions : code généré (src/shared/api/bindings.ts) et migrations SQL
+  existantes.

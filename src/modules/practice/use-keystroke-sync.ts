@@ -1,3 +1,5 @@
+/** Envoi périodique des frappes au backend. */
+
 import { useCallback, useEffect, useRef } from 'react';
 
 import { commands, unwrap } from '@/shared/api';
@@ -16,6 +18,7 @@ export const SYNC_INTERVAL_MS = 2_000;
  * parte, ce qui garde l'ordre des frappes côté backend.
  */
 export function useKeystrokeSync(sessionId: string | null) {
+  // Chaîne des envois : chaque envoi attend la fin du précédent.
   const inflight = useRef<Promise<void>>(Promise.resolve());
 
   const flush = useCallback(() => {
@@ -23,11 +26,13 @@ export function useKeystrokeSync(sessionId: string | null) {
       const store = usePracticeStore.getState();
       // La file appartient à la session chargée : ne rien envoyer pour une autre.
       if (!sessionId || store.session?.sessionId !== sessionId) return;
+      // Le lot n'est retiré de la file qu'au moment de partir ; rien à faire s'il est vide.
       const batch = store.takeBatch();
       if (batch.length === 0) return;
       try {
         await unwrap(commands.recordKeystrokes(sessionId, batch));
       } catch {
+        // Échec : le lot revient en tête de file, sauf si la session a changé entre-temps.
         if (usePracticeStore.getState().session?.sessionId === sessionId) {
           usePracticeStore.getState().requeue(batch);
         }
@@ -36,6 +41,7 @@ export function useKeystrokeSync(sessionId: string | null) {
     return inflight.current;
   }, [sessionId]);
 
+  // Envoi automatique à intervalle régulier, arrêté au démontage.
   useEffect(() => {
     const id = setInterval(() => void flush(), SYNC_INTERVAL_MS);
     return () => clearInterval(id);

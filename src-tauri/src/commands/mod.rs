@@ -3,8 +3,11 @@
 //! Chaque module a son fichier `commands/<nom>.rs` et **une ligne** dans
 //! `collect_commands!` ci-dessous (voir ADR 0005).
 
+/// Informations sur l'application et profil actif.
 pub mod app;
+/// Bibliothèque de textes.
 pub mod library;
+/// Mode Copie : réglages et sessions.
 pub mod practice;
 
 use specta_typescript::Typescript;
@@ -16,6 +19,7 @@ use crate::events::DomainEventPayload;
 pub const BINDINGS_PATH: &str =
     concat!(env!("CARGO_MANIFEST_DIR"), "/../src/shared/api/bindings.ts");
 
+/// Registre des commandes et événements exposés à l'interface.
 pub fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
@@ -39,6 +43,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
         .dangerously_cast_bigints_to_number()
 }
 
+/// Écrit le client TypeScript typé dans `src/shared/api/bindings.ts`.
 pub fn export_bindings(builder: &Builder<tauri::Wry>) -> Result<(), specta_typescript::Error> {
     builder.export(
         Typescript::default()
@@ -47,6 +52,7 @@ pub fn export_bindings(builder: &Builder<tauri::Wry>) -> Result<(), specta_types
     )
 }
 
+/// Tests du registre de commandes.
 #[cfg(test)]
 mod tests {
     /// Régénère le client typé ; la CI vérifie ensuite qu'il n'a pas changé.
