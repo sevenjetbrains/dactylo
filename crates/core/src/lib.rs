@@ -4,6 +4,7 @@
 //! statistiques, répétition espacée, traitement du texte) sont testables seules.
 
 pub mod events;
+pub mod settings;
 pub mod srs;
 pub mod stats;
 pub mod text;

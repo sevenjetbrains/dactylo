@@ -13,10 +13,11 @@ specta = ["dep:specta"]
 
 [dependencies]
 serde.workspace = true
-specta = { workspace = true, optional = true }
-
-[dev-dependencies]
 serde_json.workspace = true
+specta = { workspace = true, optional = true }
+unicode-normalization = "0.1.26"
+unicode-segmentation = "1.13.3"
+
 
 [lints]
 workspace = true

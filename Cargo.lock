@@ -584,6 +584,8 @@ dependencies = [
  "serde",
  "serde_json",
  "specta",
+ "unicode-normalization",
+ "unicode-segmentation",
 ]
 
 [[package]]
