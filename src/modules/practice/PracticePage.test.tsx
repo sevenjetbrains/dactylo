@@ -279,11 +279,31 @@ describe('PracticePage', () => {
         startedAt: 0,
       }),
     );
-    renderPage();
+    // Ouverture par le menu « Copie » : la reprise est proposée.
+    renderPage('/practice');
     await userEvent.click(await screen.findByRole('button', { name: 'Recommencer à zéro' }));
     await screen.findByLabelText('Zone de frappe');
+    // Le texte et l'exercice interrompus repartent de zéro.
     expect(api.abandonSession).toHaveBeenCalledWith('s0');
+    expect(api.startSession).toHaveBeenCalledWith('t1', 0);
+  });
+
+  it('S’entraîner sur le texte interrompu démarre une nouvelle session', async () => {
+    api.pendingSession.mockReturnValue(
+      ok({
+        sessionId: 's0',
+        textId: 't1',
+        title: 'Le chat',
+        exercise: { index: 0, count: 1 },
+        progress: 0.5,
+        startedAt: 0,
+      }),
+    );
+    // Lien de la bibliothèque vers le même texte : pas de proposition de reprise.
+    renderPage('/practice?text=t1');
+    await screen.findByLabelText('Zone de frappe');
     expect(api.startSession).toHaveBeenCalledWith('t1', null);
+    expect(screen.queryByText('Session interrompue')).not.toBeInTheDocument();
   });
 
   it('joue l’exercice demandé par l’URL puis enchaîne sur le suivant (F-24)', async () => {

@@ -81,3 +81,25 @@ test('arrêter une session puis lancer un autre texte ouvre bien le nouveau text
   await expect(page.getByRole('heading', { name: 'Second' })).toBeVisible();
   await expect(page.getByText('Session interrompue')).toBeHidden();
 });
+
+test('travailler depuis le menu Copie puis S’entraîner sur le même texte repart de zéro (NF-06)', async ({
+  page,
+}) => {
+  await pasteText(page, 'Texte', 'le texte du jour');
+  // Le menu « Copie » ouvre le dernier texte ; on tape quelques caractères.
+  await page.getByRole('link', { name: 'Copie' }).click();
+  await expect(page.getByLabel('Zone de frappe')).toBeFocused();
+  await page.keyboard.type('le te');
+  await expect(page.locator('[data-cell="1"]')).toHaveCount(5);
+  // Bibliothèque puis « S'entraîner » sur ce même texte : nouvelle session, vierge.
+  await page.getByRole('link', { name: 'Bibliothèque' }).click();
+  await page.getByRole('link', { name: "S'entraîner sur « Texte »" }).click();
+  await expect(page.getByLabel('Zone de frappe')).toBeFocused();
+  await expect(page.getByText('Session interrompue')).toBeHidden();
+  await expect(page.locator('[data-cell="1"]')).toHaveCount(0);
+  // Le menu « Copie », lui, propose de reprendre la session interrompue.
+  await page.keyboard.type('le');
+  await page.getByRole('link', { name: 'Bibliothèque' }).click();
+  await page.getByRole('link', { name: 'Copie' }).click();
+  await expect(page.getByText('Session interrompue')).toBeVisible();
+});

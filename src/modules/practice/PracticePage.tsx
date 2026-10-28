@@ -100,20 +100,17 @@ export default function PracticePage() {
     }
   }, []);
 
-  // Ouverture : une session interrompue est proposée à la reprise (NF-06), sauf si
-  // l'utilisateur a demandé un autre texte ou un autre exercice. Dans ce cas, la
-  // nouvelle session remplace l'ancienne (une seule session en cours par profil).
+  // Ouverture : sans texte demandé (menu « Copie »), une session interrompue est
+  // proposée à la reprise (NF-06). Un texte choisi dans la bibliothèque démarre
+  // toujours une nouvelle session, même s'il s'agit du texte interrompu : elle
+  // remplace l'ancienne (une seule session en cours par profil).
   useEffect(() => {
     const requests = request;
     const token = ++requests.current;
     unwrap(commands.pendingSession())
       .then((pending) => {
         if (token !== requests.current) return;
-        const sameRequest =
-          pending !== null &&
-          (requested === null || requested === pending.textId) &&
-          (requestedExercise === null || requestedExercise === pending.exercise.index);
-        if (pending && sameRequest) setPhase({ kind: 'offer', pending });
+        if (pending && requested === null) setPhase({ kind: 'offer', pending });
         else void begin(requested, requestedExercise);
       })
       .catch((e: unknown) => {
@@ -298,10 +295,10 @@ export default function PracticePage() {
     }
   };
 
-  /** Abandonne la session interrompue et en démarre une nouvelle. */
-  const discard = async (id: string) => {
-    await unwrap(commands.abandonSession(id)).catch(() => undefined);
-    await begin(requested, requestedExercise);
+  /** Abandonne la session interrompue et recommence à zéro le même texte et exercice. */
+  const discard = async (pending: PendingSession) => {
+    await unwrap(commands.abandonSession(pending.sessionId)).catch(() => undefined);
+    await begin(pending.textId, pending.exercise.index);
   };
 
   return (
@@ -357,7 +354,7 @@ export default function PracticePage() {
             <Button autoFocus onClick={() => void resume(phase.pending.sessionId)}>
               {t('resume.continue')}
             </Button>
-            <Button variant="outline" onClick={() => void discard(phase.pending.sessionId)}>
+            <Button variant="outline" onClick={() => void discard(phase.pending)}>
               {t('resume.discard')}
             </Button>
           </div>
