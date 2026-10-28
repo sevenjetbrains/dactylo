@@ -222,6 +222,39 @@ async fn abandoned_session_is_deleted() {
     ));
 }
 
+/// Une session abandonnée après des frappes est gardée avec elles (ADR 0014),
+/// mais ne reçoit plus de frappes et n'est plus proposée.
+#[tokio::test]
+async fn abandoned_session_with_keystrokes_is_kept() {
+    let (state, _) = test_support::state().await;
+    let text_id = add_text(&state, "abc").await;
+    let s = start(&state, Some(text_id), None).await.unwrap();
+    record(&state, &s.session_id, &keys(0, &["a", "b"]))
+        .await
+        .unwrap();
+    abandon(&state, &s.session_id).await.unwrap();
+    // Gardée en base avec ses deux frappes, plus proposée à la reprise.
+    let row = sessions::get(&state.pool, &s.session_id).await.unwrap();
+    assert!(row.abandoned_at.is_some());
+    assert_eq!(
+        sessions::keystrokes(&state.pool, &s.session_id)
+            .await
+            .unwrap()
+            .len(),
+        2
+    );
+    assert!(pending(&state).await.unwrap().is_none());
+    // Plus de frappes ni de fin pour elle.
+    assert!(matches!(
+        record(&state, &s.session_id, &keys(2, &["c"])).await,
+        Err(AppError::Invalid(_))
+    ));
+    assert!(matches!(
+        finish(&state, &s.session_id, 0).await,
+        Err(AppError::Invalid(_))
+    ));
+}
+
 /// Sans identifiant, la session porte sur le texte le plus récent.
 #[tokio::test]
 async fn start_without_id_uses_the_latest_text() {

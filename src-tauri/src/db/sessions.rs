@@ -23,24 +23,23 @@ pub struct SessionRow {
     pub started_at: i64,
     /// Fin, en ms Unix ; `None` tant que la session est en cours.
     pub ended_at: Option<i64>,
+    /// Abandon, en ms Unix ; une session abandonnée garde ses frappes (ADR 0014).
+    pub abandoned_at: Option<i64>,
     /// Réglages utilisés (JSON).
     pub settings: String,
 }
 
-/// Crée une session de copie. Les sessions non terminées du profil sont
-/// supprimées : on ne reprend que la dernière (NF-06).
+/// Crée une session de copie. Les sessions en cours du profil sont abandonnées
+/// (on ne reprend que la dernière, NF-06) ; leurs frappes sont conservées (ADR 0014).
 pub async fn start(
     pool: &SqlitePool,
     profile_id: &str,
     text_id: &str,
     settings_json: &str,
 ) -> AppResult<SessionRow> {
-    // Suppression et création dans la même transaction : jamais deux sessions en cours.
+    // Abandon et création dans la même transaction : jamais deux sessions en cours.
     let mut tx = pool.begin().await?;
-    sqlx::query("DELETE FROM sessions WHERE profile_id = ? AND ended_at IS NULL")
-        .bind(profile_id)
-        .execute(&mut *tx)
-        .await?;
+    abandon_scope(&mut tx, Scope::Profile(profile_id)).await?;
     // Nouvelle session, sans date de fin.
     let row = SessionRow {
         id: new_id(),
@@ -48,6 +47,7 @@ pub async fn start(
         text_id: Some(text_id.to_owned()),
         started_at: now_ms(),
         ended_at: None,
+        abandoned_at: None,
         settings: settings_json.to_owned(),
     };
     sqlx::query(
@@ -69,7 +69,8 @@ pub async fn start(
 /// Lit une session ; `NotFound` si elle n'existe pas.
 pub async fn get(pool: &SqlitePool, id: &str) -> AppResult<SessionRow> {
     sqlx::query_as(
-        "SELECT id, profile_id, text_id, started_at, ended_at, settings FROM sessions WHERE id = ?",
+        "SELECT id, profile_id, text_id, started_at, ended_at, abandoned_at, settings \
+         FROM sessions WHERE id = ?",
     )
     .bind(id)
     .fetch_optional(pool)
@@ -80,8 +81,8 @@ pub async fn get(pool: &SqlitePool, id: &str) -> AppResult<SessionRow> {
 /// Dernière session non terminée du profil (NF-06).
 pub async fn pending(pool: &SqlitePool, profile_id: &str) -> AppResult<Option<SessionRow>> {
     Ok(sqlx::query_as(
-        "SELECT id, profile_id, text_id, started_at, ended_at, settings FROM sessions \
-         WHERE profile_id = ? AND ended_at IS NULL AND text_id IS NOT NULL \
+        "SELECT id, profile_id, text_id, started_at, ended_at, abandoned_at, settings FROM sessions \
+         WHERE profile_id = ? AND ended_at IS NULL AND abandoned_at IS NULL AND text_id IS NOT NULL \
          ORDER BY started_at DESC, id DESC LIMIT 1",
     )
     .bind(profile_id)
@@ -165,10 +166,10 @@ pub async fn finish(
 ) -> AppResult<()> {
     // Statistiques et fautes sont écrites ensemble ou pas du tout.
     let mut tx = pool.begin().await?;
-    // `ended_at IS NULL` empêche de clore deux fois la même session.
+    // Seule une session en cours peut être close : ni deux fois, ni après abandon.
     let updated = sqlx::query(
         "UPDATE sessions SET ended_at = ?, duration_ms = ?, wpm_raw = ?, wpm_net = ?, \
-         cpm = ?, accuracy = ? WHERE id = ? AND ended_at IS NULL",
+         cpm = ?, accuracy = ? WHERE id = ? AND ended_at IS NULL AND abandoned_at IS NULL",
     )
     .bind(now_ms())
     .bind(stats.duration_ms)
@@ -181,7 +182,7 @@ pub async fn finish(
     .await?;
     if updated.rows_affected() == 0 {
         return Err(AppError::Invalid(format!(
-            "session {session_id} déjà terminée"
+            "session {session_id} déjà terminée ou abandonnée"
         )));
     }
     // Une ligne par faute relevée.
@@ -202,13 +203,68 @@ pub async fn finish(
     Ok(())
 }
 
-/// Supprime une session (abandon) ; ses frappes et fautes partent en cascade.
-pub async fn delete(pool: &SqlitePool, session_id: &str) -> AppResult<()> {
-    sqlx::query("DELETE FROM sessions WHERE id = ?")
-        .bind(session_id)
-        .execute(pool)
+/// Sessions en cours à abandonner : toutes celles d'un profil, ou une seule.
+enum Scope<'a> {
+    /// Toutes les sessions en cours du profil.
+    Profile(&'a str),
+    /// Une session précise.
+    Session(&'a str),
+}
+
+/// Requêtes d'abandon communes, complétées par le filtre de la portée.
+/// Macro plutôt que `format!` : sqlx n'accepte que du SQL littéral (`concat!`).
+macro_rules! abandon_sql {
+    (delete, $filter:literal) => {
+        concat!(
+            "DELETE FROM sessions WHERE ",
+            $filter,
+            " AND ended_at IS NULL AND abandoned_at IS NULL ",
+            "AND NOT EXISTS (SELECT 1 FROM keystrokes k WHERE k.session_id = sessions.id)"
+        )
+    };
+    (keep, $filter:literal) => {
+        concat!(
+            "UPDATE sessions SET abandoned_at = ?2, duration_ms = ",
+            "(SELECT MAX(k.t_ms) FROM keystrokes k WHERE k.session_id = sessions.id) ",
+            "WHERE ",
+            $filter,
+            " AND ended_at IS NULL AND abandoned_at IS NULL"
+        )
+    };
+}
+
+/// Abandonne les sessions en cours de la portée : celles sans frappe sont supprimées,
+/// les autres gardent leurs frappes, datées et avec leur temps actif (ADR 0014).
+async fn abandon_scope(conn: &mut sqlx::SqliteConnection, scope: Scope<'_>) -> AppResult<()> {
+    // Requêtes et valeur liée selon la portée.
+    let (delete, keep, value) = match scope {
+        Scope::Profile(id) => (
+            abandon_sql!(delete, "profile_id = ?1"),
+            abandon_sql!(keep, "profile_id = ?1"),
+            id,
+        ),
+        Scope::Session(id) => (
+            abandon_sql!(delete, "id = ?1"),
+            abandon_sql!(keep, "id = ?1"),
+            id,
+        ),
+    };
+    // Rien à garder d'une session sans frappe.
+    sqlx::query(delete).bind(value).execute(&mut *conn).await?;
+    // Les autres sont datées ; leur durée est le temps actif de la dernière frappe.
+    sqlx::query(keep)
+        .bind(value)
+        .bind(now_ms())
+        .execute(&mut *conn)
         .await?;
     Ok(())
+}
+
+/// Abandonne une session en cours (ADR 0014) : supprimée si elle n'a aucune frappe,
+/// gardée comme abandonnée sinon. Sans effet sur une session terminée.
+pub async fn abandon(pool: &SqlitePool, session_id: &str) -> AppResult<()> {
+    let mut conn = pool.acquire().await?;
+    abandon_scope(&mut conn, Scope::Session(session_id)).await
 }
 
 /// Statistiques stockées d'une session terminée.
@@ -337,9 +393,60 @@ mod tests {
             second.id
         );
 
-        // Après suppression, plus rien à reprendre.
-        delete(&pool, &second.id).await.unwrap();
+        // Après abandon, plus rien à reprendre.
+        abandon(&pool, &second.id).await.unwrap();
         assert!(pending(&pool, &profile).await.unwrap().is_none());
+    }
+
+    /// Une session abandonnée avec des frappes est gardée, datée, avec son temps actif ;
+    /// elle n'est plus proposée à la reprise et ne peut plus être close (ADR 0014).
+    #[tokio::test]
+    async fn abandoned_session_keeps_its_keystrokes() {
+        let (pool, profile, text) = setup().await;
+        // Deux frappes (0 et 100 ms), puis une autre session démarre.
+        let first = start(&pool, &profile, &text, "{}").await.unwrap();
+        insert_keystrokes(
+            &pool,
+            &first.id,
+            &[resolved(0, "a", true), resolved(1, "b", true)],
+        )
+        .await
+        .unwrap();
+        let second = start(&pool, &profile, &text, "{}").await.unwrap();
+        // La première est gardée comme abandonnée, avec ses frappes et sa durée.
+        let row = get(&pool, &first.id).await.unwrap();
+        assert!(row.abandoned_at.is_some());
+        assert_eq!(row.ended_at, None);
+        assert_eq!(keystrokes(&pool, &first.id).await.unwrap().len(), 2);
+        let duration: Option<i64> =
+            sqlx::query_scalar("SELECT duration_ms FROM sessions WHERE id = ?")
+                .bind(&first.id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(duration, Some(100));
+        // Seule la seconde est proposée ; l'abandonnée ne peut plus être close.
+        assert_eq!(
+            pending(&pool, &profile).await.unwrap().unwrap().id,
+            second.id
+        );
+        assert!(matches!(
+            finish(&pool, &first.id, &SessionStats::default(), &[]).await,
+            Err(AppError::Invalid(_))
+        ));
+        // Elle ne compte pas dans la moyenne des sessions terminées.
+        assert!(
+            recent_stats(&pool, &profile, "", 10)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        // Abandonner de nouveau, ou abandonner une session terminée, ne change rien.
+        abandon(&pool, &first.id).await.unwrap();
+        assert_eq!(
+            get(&pool, &first.id).await.unwrap().abandoned_at,
+            row.abandoned_at
+        );
     }
 
     /// Clore une session écrit statistiques et fautes, une seule fois.

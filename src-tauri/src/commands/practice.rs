@@ -236,9 +236,10 @@ async fn take_live(state: &AppState, session_id: &str) -> AppResult<LiveSession>
     }
     // Sinon (redémarrage, échec d'écriture), on la relit en base.
     let row = sessions::get(&state.pool, session_id).await?;
-    if row.ended_at.is_some() {
+    // Une session terminée ou abandonnée ne reçoit plus de frappes.
+    if row.ended_at.is_some() || row.abandoned_at.is_some() {
         return Err(AppError::Invalid(format!(
-            "session {session_id} déjà terminée"
+            "session {session_id} déjà terminée ou abandonnée"
         )));
     }
     let text_id = row
@@ -340,10 +341,11 @@ pub async fn finish(
     })
 }
 
-/// Abandonne une session : retirée du cache et supprimée de la base.
+/// Abandonne une session : retirée du cache ; en base, gardée avec ses frappes comme
+/// abandonnée, ou supprimée si elle n'en a aucune (ADR 0014).
 pub async fn abandon(state: &AppState, session_id: &str) -> AppResult<()> {
     state.take_live(session_id);
-    sessions::delete(&state.pool, session_id).await
+    sessions::abandon(&state.pool, session_id).await
 }
 
 /// Session interrompue à proposer à la reprise, s'il y en a une (NF-06).
@@ -352,9 +354,9 @@ pub async fn pending(state: &AppState) -> AppResult<Option<PendingSession>> {
         return Ok(None);
     };
     let live = take_live(state, &row.id).await?;
-    // Une session ouverte sans aucune frappe n'a rien à reprendre.
+    // Une session ouverte sans aucune frappe n'a rien à reprendre : elle est supprimée.
     if live.typing.last_seq().is_none() {
-        sessions::delete(&state.pool, &row.id).await?;
+        sessions::abandon(&state.pool, &row.id).await?;
         return Ok(None);
     }
     // Titre du texte, pour l'affichage de la proposition.
