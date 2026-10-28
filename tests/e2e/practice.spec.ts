@@ -62,3 +62,22 @@ test('sans texte, la page renvoie vers la bibliothèque', async ({ page }) => {
   await page.getByRole('link', { name: 'Ouvrir la bibliothèque' }).click();
   await expect(page.getByRole('heading', { name: 'Bibliothèque' })).toBeVisible();
 });
+
+test('arrêter une session puis lancer un autre texte ouvre bien le nouveau texte (NF-06)', async ({
+  page,
+}) => {
+  await pasteText(page, 'Premier', 'le premier texte');
+  await pasteText(page, 'Second', 'le second texte');
+  // Session commencée sur le premier texte, puis arrêtée en pleine frappe (Échap).
+  await page.getByRole('link', { name: "S'entraîner sur « Premier »" }).click();
+  await expect(page.getByLabel('Zone de frappe')).toBeFocused();
+  await page.keyboard.type('le pre');
+  await page.keyboard.press('Escape');
+  await expect(page.getByText(/En pause/)).toBeVisible();
+  // Retour à la bibliothèque, puis l'autre texte.
+  await page.getByRole('link', { name: 'Bibliothèque' }).click();
+  await page.getByRole('link', { name: "S'entraîner sur « Second »" }).click();
+  // Le second texte s'ouvre directement, sans proposer l'ancienne session.
+  await expect(page.getByRole('heading', { name: 'Second' })).toBeVisible();
+  await expect(page.getByText('Session interrompue')).toBeHidden();
+});

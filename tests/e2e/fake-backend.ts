@@ -31,9 +31,17 @@ export async function installFakeBackend(page: Page) {
     const split = (s: string) => Array.from(segmenter.segment(s), (x) => x.segment);
     // « Base » en mémoire : textes, sessions et réglages par défaut.
     const texts: Text[] = [];
+    /** Sessions par identifiant, dans l'ordre de création ; `done` une fois terminées. */
     const sessions = new Map<
       string,
-      { textId: string; keys: Key[]; exercise: { index: number; count: number }; text: string }
+      {
+        textId: string;
+        title: string;
+        keys: Key[];
+        exercise: { index: number; count: number };
+        text: string;
+        done: boolean;
+      }
     >();
     const settings = {
       fontSize: 20,
@@ -107,7 +115,25 @@ export async function installFakeBackend(page: Page) {
         keyboardLayout: 'azerty',
         createdAt: 0,
       }),
-      pending_session: () => null,
+      // Comme le vrai backend (NF-06) : dernière session non terminée ; sans frappe,
+      // elle est supprimée et rien n'est proposé.
+      pending_session: () => {
+        const entry = [...sessions].reverse().find(([, s]) => !s.done);
+        if (!entry) return null;
+        const [sessionId, s] = entry;
+        if (s.keys.length === 0) {
+          sessions.delete(sessionId);
+          return null;
+        }
+        return {
+          sessionId,
+          textId: s.textId,
+          title: s.title,
+          exercise: s.exercise,
+          progress: s.keys.length / Math.max(1, split(s.text).length),
+          startedAt: 0,
+        };
+      },
       get_practice_settings: () => settings,
       save_practice_settings: (a) => a.settings,
       // Du plus récent au plus ancien, filtré par titre, comme la vraie bibliothèque.
@@ -189,9 +215,18 @@ export async function installFakeBackend(page: Page) {
         const index =
           (a.exercise as number | null) ?? (text.completed >= all.length ? 0 : text.completed);
         const content = all[index] ?? '';
+        // Une seule session en cours par profil : celles non terminées sont supprimées.
+        for (const [id, s] of sessions) if (!s.done) sessions.delete(id);
         const sessionId = `s${++counter}`;
         const exercise = { index, count: all.length };
-        sessions.set(sessionId, { textId: text.id, keys: [], exercise, text: content });
+        sessions.set(sessionId, {
+          textId: text.id,
+          title: text.title,
+          keys: [],
+          exercise,
+          text: content,
+          done: false,
+        });
         const graphemes = split(content);
         // Mots : suites de lettres ou chiffres (version simplifiée de `word_spans`).
         const words: { start: number; end: number }[] = [];
@@ -223,6 +258,7 @@ export async function installFakeBackend(page: Page) {
       finish_session: (a) => {
         const session = sessions.get(a.sessionId as string);
         if (!session) throw { code: 'notFound', message: 'session' };
+        session.done = true;
         const text = split(session.text);
         // Statistiques simplistes : une insertion est fausse si elle diffère du texte à son rang.
         const inserts = session.keys.filter((k) => k.kind === 'insert');
