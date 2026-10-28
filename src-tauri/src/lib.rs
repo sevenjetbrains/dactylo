@@ -5,6 +5,8 @@ pub mod db;
 pub mod error;
 pub mod events;
 pub mod state;
+#[cfg(test)]
+mod test_support;
 
 use std::sync::Arc;
 
@@ -36,11 +38,7 @@ pub fn run() {
             let bus = Arc::new(EventBus::new());
             bus.subscribe(Arc::new(FrontendForwarder::new(app.handle().clone())));
 
-            app.manage(AppState {
-                pool,
-                bus,
-                profile_id: profile.id,
-            });
+            app.manage(AppState::new(pool, bus, profile.id));
             Ok(())
         })
         .run(tauri::generate_context!())

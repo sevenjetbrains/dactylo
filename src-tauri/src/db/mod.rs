@@ -1,6 +1,8 @@
 //! Accès SQLite : ouverture, PRAGMA et migrations automatiques (NF-05).
 
 pub mod profiles;
+pub mod sessions;
+pub mod texts;
 
 use std::path::Path;
 use std::str::FromStr;

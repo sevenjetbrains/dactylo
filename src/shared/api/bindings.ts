@@ -9,6 +9,18 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 export const commands = {
 	appInfo: () => __TAURI_INVOKE<AppInfo>("app_info"),
 	currentProfile: () => typedError<Profile, ApiError>(__TAURI_INVOKE("current_profile")),
+	createText: (input: NewText) => typedError<TextSummary, ApiError>(__TAURI_INVOKE("create_text", { input })),
+	listTexts: () => typedError<TextSummary[], ApiError>(__TAURI_INVOKE("list_texts")),
+	getPracticeSettings: () => typedError<PracticeSettings_Serialize, ApiError>(__TAURI_INVOKE("get_practice_settings")),
+	savePracticeSettings: (settings: PracticeSettings_Deserialize) => typedError<PracticeSettings_Serialize, ApiError>(__TAURI_INVOKE("save_practice_settings", { settings })),
+	startSession: (textId: string | null) => typedError<SessionStart_Serialize, ApiError>(__TAURI_INVOKE("start_session", { textId })),
+	recordKeystrokes: (sessionId: string, keystrokes: Keystroke_Deserialize[]) => typedError<number | null, ApiError>(__TAURI_INVOKE("record_keystrokes", { sessionId, keystrokes })),
+	finishSession: (sessionId: string, activeMs: number) => typedError<SessionSummary_Serialize, ApiError>(__TAURI_INVOKE("finish_session", { sessionId, activeMs })),
+	abandonSession: (sessionId: string) => typedError<null, ApiError>(__TAURI_INVOKE("abandon_session", { sessionId })),
+	pendingSession: () => typedError<PendingSession | null, ApiError>(__TAURI_INVOKE("pending_session")),
+	resumeSession: (sessionId: string) => typedError<SessionStart_Serialize, ApiError>(__TAURI_INVOKE("resume_session", { sessionId })),
+	wrapText: (sessionId: string, columns: number) => typedError<number[], ApiError>(__TAURI_INVOKE("wrap_text", { sessionId, columns })),
+	nextTextId: (textId: string) => typedError<string | null, ApiError>(__TAURI_INVOKE("next_text_id", { textId })),
 };
 
 /** Events */
@@ -17,6 +29,9 @@ export const events = {
 };
 
 /* Types */
+/**  Position de la ligne active dans la zone de frappe (F-03). */
+export type ActiveLine = "top" | "center";
+
 /**  Forme sérialisée de `AppError`, décrite pour specta. */
 export type ApiError = {
 	code: ErrorCode,
@@ -27,6 +42,21 @@ export type AppInfo = {
 	name: string,
 	version: string,
 };
+
+/**  Moyenne de sessions passées, pour la comparaison de l'écran de fin (F-32). */
+export type AverageStats = {
+	sessions: number,
+	wpmNet: number | null,
+	cpm: number | null,
+	accuracy: number | null,
+};
+
+/**  Comportement face à une erreur (F-04). */
+export type CorrectionMode = 
+/**  Impossible d'avancer tant que l'erreur n'est pas corrigée. */
+"blocking" | 
+/**  On avance ; l'erreur reste comptée. */
+"free";
 
 /**  Événement métier émis par un module. */
 export type DomainEvent = 
@@ -40,13 +70,214 @@ export type DomainEvent =
 /**  Événement Tauri typé portant un `DomainEvent` ; les modules React s'y abonnent. */
 export type DomainEventPayload = DomainEvent;
 
-export type ErrorCode = "database" | "migration" | "notFound";
+export type ErrorCode = "database" | "migration" | "notFound" | "invalid";
+
+/**
+ *  Type de faute ; valeurs identiques à la contrainte `session_errors.error_type`.
+ * 
+ *  Le mode Copie, caractère par caractère, produit `Accent`, `Case`,
+ *  `Punctuation` et `Substitution` ; les autres viennent de l'alignement
+ *  mot à mot de la dictée (F-16, Phase 4).
+ */
+export type ErrorType = "accent" | "missing_letter" | "extra_letter" | "transposition" | "substitution" | "missing_word" | "extra_word" | "punctuation" | "case";
+
+/**  Nature d'une frappe. */
+export type KeyKind = "insert" | "delete";
+
+/**  Frappe brute envoyée par l'interface. */
+export type Keystroke = Keystroke_Serialize | Keystroke_Deserialize;
+
+/**  Frappe brute envoyée par l'interface. */
+export type Keystroke_Deserialize = {
+	/**  Numéro d'ordre, croissant à partir de 0. */
+	seq: number,
+	kind: KeyKind,
+	/**  Graphème tapé (insertion uniquement). */
+	typed?: string | null,
+	/**  Temps actif écoulé depuis la première frappe, pauses exclues. */
+	tMs: number,
+};
+
+/**  Frappe brute envoyée par l'interface. */
+export type Keystroke_Serialize = {
+	/**  Numéro d'ordre, croissant à partir de 0. */
+	seq: number,
+	kind: KeyKind,
+	/**  Graphème tapé (insertion uniquement). */
+	typed: string | null,
+	/**  Temps actif écoulé depuis la première frappe, pauses exclues. */
+	tMs: number,
+};
+
+/**  Texte saisi par l'utilisateur (F-20). */
+export type NewText = {
+	title: string,
+	content: string,
+	tags: string[],
+	language: string,
+};
+
+/**  Session interrompue proposée à la reprise (NF-06). */
+export type PendingSession = {
+	sessionId: string,
+	title: string,
+	/**  Avancement, de 0 à 1. */
+	progress: number | null,
+	startedAt: number,
+};
+
+/**  Réglages d'entraînement d'un profil. */
+export type PracticeSettings = PracticeSettings_Serialize | PracticeSettings_Deserialize;
+
+/**  Réglages d'entraînement d'un profil. */
+export type PracticeSettings_Deserialize = {
+	/**  Taille de police en px (F-01). */
+	fontSize?: number,
+	/**  Lignes visibles (F-03). */
+	visibleLines?: number,
+	activeLine?: ActiveLine,
+	correction?: CorrectionMode,
+	backspaceAllowed?: boolean,
+	/**  Bandeau MPM / précision / temps / progression (F-05). */
+	showBanner?: boolean,
+	lenientPunctuation?: boolean,
+	goal?: SessionGoal,
+};
+
+/**  Réglages d'entraînement d'un profil. */
+export type PracticeSettings_Serialize = {
+	/**  Taille de police en px (F-01). */
+	fontSize: number,
+	/**  Lignes visibles (F-03). */
+	visibleLines: number,
+	activeLine: ActiveLine,
+	correction: CorrectionMode,
+	backspaceAllowed: boolean,
+	/**  Bandeau MPM / précision / temps / progression (F-05). */
+	showBanner: boolean,
+	lenientPunctuation: boolean,
+	goal: SessionGoal,
+};
 
 export type Profile = {
 	id: string,
 	name: string,
 	keyboardLayout: string,
 	createdAt: number,
+};
+
+/**  Type de session (F-06). */
+export type SessionGoal = 
+/**  Jusqu'au dernier caractère du texte. */
+{ type: "wholeText" } | 
+/**  Durée fixe, en minutes. */
+{ type: "duration"; minutes: number } | 
+/**  Nombre de mots fixe. */
+{ type: "words"; count: number };
+
+/**  Tout ce qu'il faut à l'interface pour afficher une session. */
+export type SessionStart = SessionStart_Serialize | SessionStart_Deserialize;
+
+/**  Tout ce qu'il faut à l'interface pour afficher une session. */
+export type SessionStart_Deserialize = {
+	sessionId: string,
+	textId: string,
+	title: string,
+	/**  Texte découpé en graphèmes : les positions des deux côtés coïncident (ADR 0008). */
+	graphemes: string[],
+	words: WordSpan[],
+	/**  Réglages figés pour la session. */
+	settings: PracticeSettings_Deserialize,
+	/**  Frappes déjà enregistrées, à rejouer (reprise) ; vide pour une nouvelle session. */
+	keystrokes: Keystroke_Deserialize[],
+	/**  Temps actif déjà écoulé. */
+	activeMs: number,
+};
+
+/**  Tout ce qu'il faut à l'interface pour afficher une session. */
+export type SessionStart_Serialize = {
+	sessionId: string,
+	textId: string,
+	title: string,
+	/**  Texte découpé en graphèmes : les positions des deux côtés coïncident (ADR 0008). */
+	graphemes: string[],
+	words: WordSpan[],
+	/**  Réglages figés pour la session. */
+	settings: PracticeSettings_Serialize,
+	/**  Frappes déjà enregistrées, à rejouer (reprise) ; vide pour une nouvelle session. */
+	keystrokes: Keystroke_Serialize[],
+	/**  Temps actif déjà écoulé. */
+	activeMs: number,
+};
+
+/**  Statistiques d'une session terminée (F-30). */
+export type SessionStats = {
+	/**  Temps actif, pauses exclues. */
+	durationMs: number,
+	/**  Caractères frappés (insertions, justes ou non). */
+	typed: number,
+	/**  Frappes fausses, corrigées ou non. */
+	errors: number,
+	/**  Caractères encore faux à la fin. */
+	uncorrected: number,
+	wpmRaw: number | null,
+	wpmNet: number | null,
+	cpm: number | null,
+	/**  En %, de 0 à 100. */
+	accuracy: number | null,
+};
+
+/**  Résumé de l'écran de fin (F-32). */
+export type SessionSummary = SessionSummary_Serialize | SessionSummary_Deserialize;
+
+/**  Résumé de l'écran de fin (F-32). */
+export type SessionSummary_Deserialize = {
+	sessionId: string,
+	textId: string,
+	stats: SessionStats,
+	errors: TypingError[],
+	/**  Moyenne des dernières sessions, hors celle-ci ; `None` pour la première. */
+	average?: AverageStats | null,
+};
+
+/**  Résumé de l'écran de fin (F-32). */
+export type SessionSummary_Serialize = {
+	sessionId: string,
+	textId: string,
+	stats: SessionStats,
+	errors: TypingError[],
+	/**  Moyenne des dernières sessions, hors celle-ci ; `None` pour la première. */
+	average: AverageStats | null,
+};
+
+/**  Entrée de la liste de la bibliothèque. */
+export type TextSummary = {
+	id: string,
+	title: string,
+	language: string,
+	tags: string[],
+	/**  Nombre de caractères du contenu. */
+	length: number,
+	createdAt: number,
+};
+
+/**  Faute relevée dans une session. */
+export type TypingError = {
+	/**  Mot attendu, ou caractère attendu hors mot. */
+	expected: string,
+	/**  Forme tapée au premier passage. */
+	typed: string,
+	errorType: ErrorType,
+	/**  Index du premier graphème concerné. */
+	position: number,
+	/**  `true` pour un mot, `false` pour une espace ou une ponctuation isolée. */
+	word: boolean,
+};
+
+/**  Bornes d'un mot dans le texte : `[start, end[` en indices de graphèmes. */
+export type WordSpan = {
+	start: number,
+	end: number,
 };
 
 /* Tauri Specta runtime */

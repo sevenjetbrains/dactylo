@@ -9,6 +9,8 @@ pub enum AppError {
     Migration(#[from] sqlx::migrate::MigrateError),
     #[error("introuvable : {0}")]
     NotFound(String),
+    #[error("{0}")]
+    Invalid(String),
 }
 
 impl AppError {
@@ -17,6 +19,7 @@ impl AppError {
             AppError::Database(_) => ErrorCode::Database,
             AppError::Migration(_) => ErrorCode::Migration,
             AppError::NotFound(_) => ErrorCode::NotFound,
+            AppError::Invalid(_) => ErrorCode::Invalid,
         }
     }
 }
@@ -27,6 +30,7 @@ pub enum ErrorCode {
     Database,
     Migration,
     NotFound,
+    Invalid,
 }
 
 /// Forme sérialisée de `AppError`, décrite pour specta.

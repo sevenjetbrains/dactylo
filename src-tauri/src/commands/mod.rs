@@ -4,6 +4,8 @@
 //! `collect_commands!` ci-dessous (voir ADR 0005).
 
 pub mod app;
+pub mod library;
+pub mod practice;
 
 use specta_typescript::Typescript;
 use tauri_specta::{Builder, collect_commands, collect_events};
@@ -16,7 +18,22 @@ pub const BINDINGS_PATH: &str =
 
 pub fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
-        .commands(collect_commands![app::app_info, app::current_profile,])
+        .commands(collect_commands![
+            app::app_info,
+            app::current_profile,
+            library::create_text,
+            library::list_texts,
+            practice::get_practice_settings,
+            practice::save_practice_settings,
+            practice::start_session,
+            practice::record_keystrokes,
+            practice::finish_session,
+            practice::abandon_session,
+            practice::pending_session,
+            practice::resume_session,
+            practice::wrap_text,
+            practice::next_text_id,
+        ])
         .events(collect_events![DomainEventPayload])
         // Les i64 sont des horodatages en ms et des compteurs : très en deçà de 2^53.
         .dangerously_cast_bigints_to_number()

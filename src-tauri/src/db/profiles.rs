@@ -53,6 +53,43 @@ pub async fn ensure_default(pool: &SqlitePool) -> AppResult<Profile> {
     Ok(profile)
 }
 
+/// Réglages d'un module : la clé `key` du JSON `profiles.settings` (ADR 0010).
+pub async fn get_settings(
+    pool: &SqlitePool,
+    id: &str,
+    key: &str,
+) -> AppResult<Option<serde_json::Value>> {
+    let raw: Option<Option<String>> =
+        sqlx::query_scalar("SELECT settings -> ('$.' || ?) FROM profiles WHERE id = ?")
+            .bind(key)
+            .bind(id)
+            .fetch_optional(pool)
+            .await?;
+    let raw = raw.ok_or_else(|| AppError::NotFound(format!("profil {id}")))?;
+    Ok(raw.and_then(|r| serde_json::from_str(&r).ok()))
+}
+
+/// Remplace la clé `key` du JSON `profiles.settings`, sans toucher aux autres.
+pub async fn save_settings(
+    pool: &SqlitePool,
+    id: &str,
+    key: &str,
+    value: &serde_json::Value,
+) -> AppResult<()> {
+    let updated = sqlx::query(
+        "UPDATE profiles SET settings = json_set(settings, '$.' || ?, json(?)) WHERE id = ?",
+    )
+    .bind(key)
+    .bind(value.to_string())
+    .bind(id)
+    .execute(pool)
+    .await?;
+    if updated.rows_affected() == 0 {
+        return Err(AppError::NotFound(format!("profil {id}")));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -79,6 +116,37 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(count, 1);
+    }
+
+    #[tokio::test]
+    async fn settings_are_stored_per_key() {
+        let pool = connect_in_memory().await.unwrap();
+        let id = ensure_default(&pool).await.unwrap().id;
+        assert_eq!(get_settings(&pool, &id, "practice").await.unwrap(), None);
+
+        let practice = serde_json::json!({ "visibleLines": 5 });
+        save_settings(&pool, &id, "practice", &practice)
+            .await
+            .unwrap();
+        save_settings(&pool, &id, "other", &serde_json::json!(true))
+            .await
+            .unwrap();
+        assert_eq!(
+            get_settings(&pool, &id, "practice").await.unwrap(),
+            Some(practice)
+        );
+        assert_eq!(
+            get_settings(&pool, &id, "other").await.unwrap(),
+            Some(serde_json::json!(true))
+        );
+        assert!(matches!(
+            get_settings(&pool, "absent", "practice").await,
+            Err(AppError::NotFound(_))
+        ));
+        assert!(matches!(
+            save_settings(&pool, "absent", "practice", &serde_json::json!({})).await,
+            Err(AppError::NotFound(_))
+        ));
     }
 
     #[tokio::test]
