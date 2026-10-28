@@ -100,14 +100,20 @@ export default function PracticePage() {
     }
   }, []);
 
-  // Ouverture : une session interrompue est proposée à la reprise avant tout.
+  // Ouverture : une session interrompue est proposée à la reprise (NF-06), sauf si
+  // l'utilisateur a demandé un autre texte ou un autre exercice. Dans ce cas, la
+  // nouvelle session remplace l'ancienne (une seule session en cours par profil).
   useEffect(() => {
     const requests = request;
     const token = ++requests.current;
     unwrap(commands.pendingSession())
       .then((pending) => {
         if (token !== requests.current) return;
-        if (pending) setPhase({ kind: 'offer', pending });
+        const sameRequest =
+          pending !== null &&
+          (requested === null || requested === pending.textId) &&
+          (requestedExercise === null || requestedExercise === pending.exercise.index);
+        if (pending && sameRequest) setPhase({ kind: 'offer', pending });
         else void begin(requested, requestedExercise);
       })
       .catch((e: unknown) => {

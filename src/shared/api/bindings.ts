@@ -387,6 +387,8 @@ export type PdfText_Serialize = {
 export type PendingSession = {
 	/**  Identifiant de la session. */
 	sessionId: string,
+	/**  Texte de la session : un autre texte demandé ne propose pas cette reprise. */
+	textId: string,
 	/**  Titre du texte. */
 	title: string,
 	/**  Exercice interrompu. */

@@ -232,7 +232,14 @@ describe('PracticePage', () => {
 
   it('propose de reprendre une session interrompue et rejoue ses frappes (NF-06)', async () => {
     api.pendingSession.mockReturnValue(
-      ok({ sessionId: 's0', title: 'Le chat', progress: 0.25, startedAt: 0 }),
+      ok({
+        sessionId: 's0',
+        textId: 't1',
+        title: 'Le chat',
+        exercise: { index: 0, count: 1 },
+        progress: 0.25,
+        startedAt: 0,
+      }),
     );
     // La session reprise contient déjà « le », tapé en 400 ms.
     api.resumeSession.mockReturnValue(
@@ -263,7 +270,14 @@ describe('PracticePage', () => {
 
   it('abandonne la session interrompue sur demande', async () => {
     api.pendingSession.mockReturnValue(
-      ok({ sessionId: 's0', title: 'Le chat', progress: 0.5, startedAt: 0 }),
+      ok({
+        sessionId: 's0',
+        textId: 't1',
+        title: 'Le chat',
+        exercise: { index: 0, count: 1 },
+        progress: 0.5,
+        startedAt: 0,
+      }),
     );
     renderPage();
     await userEvent.click(await screen.findByRole('button', { name: 'Recommencer à zéro' }));
@@ -300,6 +314,24 @@ describe('PracticePage', () => {
       await screen.findByRole('button', { name: 'Exercice suivant (3 sur 3)' }),
     );
     await waitFor(() => expect(api.startSession).toHaveBeenLastCalledWith('t1', 2));
+  });
+
+  it('démarre directement un autre texte demandé, sans proposer l’ancienne session', async () => {
+    // Session interrompue sur t0, mais l'utilisateur a choisi t1.
+    api.pendingSession.mockReturnValue(
+      ok({
+        sessionId: 's0',
+        textId: 't0',
+        title: 'Ancien texte',
+        exercise: { index: 0, count: 1 },
+        progress: 0.5,
+        startedAt: 0,
+      }),
+    );
+    renderPage('/practice?text=t1');
+    await screen.findByLabelText('Zone de frappe');
+    expect(api.startSession).toHaveBeenCalledWith('t1', null);
+    expect(screen.queryByText(/Ancien texte/)).not.toBeInTheDocument();
   });
 
   it('renvoie vers la bibliothèque quand il n’y a aucun texte', async () => {

@@ -69,6 +69,8 @@ pub struct SessionStart {
 pub struct PendingSession {
     /// Identifiant de la session.
     pub session_id: String,
+    /// Texte de la session : un autre texte demandé ne propose pas cette reprise.
+    pub text_id: String,
     /// Titre du texte.
     pub title: String,
     /// Exercice interrompu.
@@ -364,6 +366,7 @@ pub async fn pending(state: &AppState) -> AppResult<Option<PendingSession>> {
     let len = live.typing.text().len().max(1);
     let pending = PendingSession {
         session_id: row.id.clone(),
+        text_id: live.text_id.clone(),
         title,
         exercise: live.exercise.into(),
         progress: live.typing.position() as f64 / len as f64,

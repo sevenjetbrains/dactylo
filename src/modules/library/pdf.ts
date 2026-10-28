@@ -74,6 +74,7 @@ export async function openPdf(data: ArrayBuffer): Promise<PdfDocument> {
     cMapUrl: `${assets}/cmaps/`,
     cMapPacked: true,
     wasmUrl: `${assets}/wasm/`,
+    iccUrl: `${assets}/iccs/`,
   });
   const doc = await task.promise;
   return {

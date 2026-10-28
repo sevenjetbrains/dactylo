@@ -69,6 +69,7 @@ describe('HomePage', () => {
       status: 'ok',
       data: {
         sessionId: 's1',
+        textId: 't1',
         title: 'Le loup',
         exercise: { index: 2, count: 8 },
         progress: 0.42,

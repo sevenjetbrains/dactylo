@@ -179,6 +179,7 @@ async fn interrupted_session_is_offered_for_resumption() {
     // La reprise est proposée avec le titre et 25 % d'avancement.
     let offer = pending(&restarted).await.unwrap().unwrap();
     assert_eq!(offer.session_id, s.session_id);
+    assert_eq!(offer.text_id, s.text_id);
     assert_eq!(offer.title, "Texte");
     assert_eq!(offer.progress, 0.25);
 

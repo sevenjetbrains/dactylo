@@ -13,8 +13,11 @@ const host = process.env.TAURI_DEV_HOST;
 
 /** Dossier de pdfjs-dist qui contient ses ressources annexes. */
 const PDFJS_ROOT = fileURLToPath(new URL('./node_modules/pdfjs-dist/', import.meta.url));
-/** Ressources de pdf.js : polices standard, CMaps (textes asiatiques) et décodeurs wasm. */
-const PDFJS_DIRS = ['standard_fonts', 'cmaps', 'wasm'];
+/**
+ * Ressources de pdf.js : polices standard, CMaps (textes asiatiques), décodeurs wasm
+ * et profils ICC (couleurs CMJN des PDF destinés à l'impression).
+ */
+const PDFJS_DIRS = ['standard_fonts', 'cmaps', 'wasm', 'iccs'];
 
 /**
  * Sert sous `/pdfjs/` les ressources annexes de pdf.js (ADR 0011) : en développement
@@ -37,7 +40,7 @@ function pdfjsAssets(): Plugin {
       });
     },
     generateBundle() {
-      // Chaque fichier des trois dossiers devient un fichier du paquet, sous `pdfjs/`.
+      // Chaque fichier de ces dossiers devient un fichier du paquet, sous `pdfjs/`.
       for (const dir of PDFJS_DIRS) {
         for (const name of readdirSync(path.join(PDFJS_ROOT, dir))) {
           this.emitFile({
