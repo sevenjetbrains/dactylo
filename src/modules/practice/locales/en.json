@@ -1,6 +1,7 @@
 {
   "menu": "Copy",
   "title": "Copy",
+  "reviewTitle": "Difficult words review",
   "typingInput": "Typing area",
   "paused": "Paused — press Esc to resume.",
   "saving": "Saving the session…",
@@ -42,7 +43,8 @@
     "restart": "Restart",
     "next": "Next text",
     "library": "Library",
-    "nextExercise": "Next exercise ({{current}} of {{count}})"
+    "nextExercise": "Next exercise ({{current}} of {{count}})",
+    "backToReview": "Back to review"
   },
   "errorType": {
     "accent": "accent",

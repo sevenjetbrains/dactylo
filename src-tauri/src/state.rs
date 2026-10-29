@@ -30,8 +30,8 @@ pub struct SessionExercise {
 pub struct LiveSession {
     /// Profil qui joue la session.
     pub profile_id: String,
-    /// Texte tapé.
-    pub text_id: String,
+    /// Texte tapé ; `None` pour une révision sur un texte généré (ADR 0018).
+    pub text_id: Option<String>,
     /// Réglages figés au début de la session.
     pub settings: PracticeSettings,
     /// Exercice tapé.

@@ -9,6 +9,8 @@ use crate::error::{AppError, AppResult};
 
 /// Mode d'entraînement, valeur de `sessions.mode`.
 pub const MODE_COPY: &str = "copy";
+/// Session de révision sur un texte généré, sans texte stocké (ADR 0018).
+pub const MODE_REVIEW: &str = "review";
 
 /// Ligne de la table `sessions` utile au mode Copie.
 #[derive(Debug, Clone, sqlx::FromRow)]
@@ -17,8 +19,10 @@ pub struct SessionRow {
     pub id: String,
     /// Profil qui joue la session.
     pub profile_id: String,
-    /// Texte tapé (absent pour une dictée libre, plus tard).
+    /// Texte tapé ; absent pour une révision (ADR 0018) ou un texte supprimé.
     pub text_id: Option<String>,
+    /// Mode (`copy`, `review`…).
+    pub mode: String,
     /// Début, en ms Unix.
     pub started_at: i64,
     /// Fin, en ms Unix ; `None` tant que la session est en cours.
@@ -29,12 +33,14 @@ pub struct SessionRow {
     pub settings: String,
 }
 
-/// Crée une session de copie. Les sessions en cours du profil sont abandonnées
-/// (on ne reprend que la dernière, NF-06) ; leurs frappes sont conservées (ADR 0014).
+/// Crée une session, sur un texte de la bibliothèque ou non (révision, ADR 0018).
+/// Les sessions en cours du profil sont abandonnées (on ne reprend que la dernière,
+/// NF-06) ; leurs frappes sont conservées (ADR 0014).
 pub async fn start(
     pool: &SqlitePool,
     profile_id: &str,
-    text_id: &str,
+    text_id: Option<&str>,
+    mode: &str,
     settings_json: &str,
 ) -> AppResult<SessionRow> {
     // Abandon et création dans la même transaction : jamais deux sessions en cours.
@@ -44,7 +50,8 @@ pub async fn start(
     let row = SessionRow {
         id: new_id(),
         profile_id: profile_id.to_owned(),
-        text_id: Some(text_id.to_owned()),
+        text_id: text_id.map(str::to_owned),
+        mode: mode.to_owned(),
         started_at: now_ms(),
         ended_at: None,
         abandoned_at: None,
@@ -57,7 +64,7 @@ pub async fn start(
     .bind(&row.id)
     .bind(&row.profile_id)
     .bind(&row.text_id)
-    .bind(MODE_COPY)
+    .bind(&row.mode)
     .bind(row.started_at)
     .bind(&row.settings)
     .execute(&mut *tx)
@@ -69,7 +76,7 @@ pub async fn start(
 /// Lit une session ; `NotFound` si elle n'existe pas.
 pub async fn get(pool: &SqlitePool, id: &str) -> AppResult<SessionRow> {
     sqlx::query_as(
-        "SELECT id, profile_id, text_id, started_at, ended_at, abandoned_at, settings \
+        "SELECT id, profile_id, text_id, mode, started_at, ended_at, abandoned_at, settings \
          FROM sessions WHERE id = ?",
     )
     .bind(id)
@@ -78,11 +85,13 @@ pub async fn get(pool: &SqlitePool, id: &str) -> AppResult<SessionRow> {
     .ok_or_else(|| AppError::NotFound(format!("session {id}")))
 }
 
-/// Dernière session non terminée du profil (NF-06).
+/// Dernière session non terminée du profil (NF-06). Une copie dont le texte a été
+/// supprimé n'est pas reprenable ; une révision porte son texte (ADR 0018).
 pub async fn pending(pool: &SqlitePool, profile_id: &str) -> AppResult<Option<SessionRow>> {
     Ok(sqlx::query_as(
-        "SELECT id, profile_id, text_id, started_at, ended_at, abandoned_at, settings FROM sessions \
-         WHERE profile_id = ? AND ended_at IS NULL AND abandoned_at IS NULL AND text_id IS NOT NULL \
+        "SELECT id, profile_id, text_id, mode, started_at, ended_at, abandoned_at, settings \
+         FROM sessions WHERE profile_id = ? AND ended_at IS NULL AND abandoned_at IS NULL \
+         AND (text_id IS NOT NULL OR mode = 'review') \
          ORDER BY started_at DESC, id DESC LIMIT 1",
     )
     .bind(profile_id)
@@ -350,7 +359,9 @@ mod tests {
     #[tokio::test]
     async fn keystrokes_round_trip_and_duplicates_are_ignored() {
         let (pool, profile, text) = setup().await;
-        let s = start(&pool, &profile, &text, "{}").await.unwrap();
+        let s = start(&pool, &profile, Some(&text), MODE_COPY, "{}")
+            .await
+            .unwrap();
         insert_keystrokes(&pool, &s.id, &[resolved(0, "a", true)])
             .await
             .unwrap();
@@ -376,14 +387,18 @@ mod tests {
     #[tokio::test]
     async fn starting_a_session_replaces_the_unfinished_one() {
         let (pool, profile, text) = setup().await;
-        let first = start(&pool, &profile, &text, "{}").await.unwrap();
+        let first = start(&pool, &profile, Some(&text), MODE_COPY, "{}")
+            .await
+            .unwrap();
         assert_eq!(
             pending(&pool, &profile).await.unwrap().unwrap().id,
             first.id
         );
 
         // La seconde session remplace la première.
-        let second = start(&pool, &profile, &text, "{}").await.unwrap();
+        let second = start(&pool, &profile, Some(&text), MODE_COPY, "{}")
+            .await
+            .unwrap();
         assert!(matches!(
             get(&pool, &first.id).await,
             Err(AppError::NotFound(_))
@@ -404,7 +419,9 @@ mod tests {
     async fn abandoned_session_keeps_its_keystrokes() {
         let (pool, profile, text) = setup().await;
         // Deux frappes (0 et 100 ms), puis une autre session démarre.
-        let first = start(&pool, &profile, &text, "{}").await.unwrap();
+        let first = start(&pool, &profile, Some(&text), MODE_COPY, "{}")
+            .await
+            .unwrap();
         insert_keystrokes(
             &pool,
             &first.id,
@@ -412,7 +429,9 @@ mod tests {
         )
         .await
         .unwrap();
-        let second = start(&pool, &profile, &text, "{}").await.unwrap();
+        let second = start(&pool, &profile, Some(&text), MODE_COPY, "{}")
+            .await
+            .unwrap();
         // La première est gardée comme abandonnée, avec ses frappes et sa durée.
         let row = get(&pool, &first.id).await.unwrap();
         assert!(row.abandoned_at.is_some());
@@ -453,7 +472,9 @@ mod tests {
     #[tokio::test]
     async fn finish_writes_stats_and_errors_once() {
         let (pool, profile, text) = setup().await;
-        let s = start(&pool, &profile, &text, "{}").await.unwrap();
+        let s = start(&pool, &profile, Some(&text), MODE_COPY, "{}")
+            .await
+            .unwrap();
         let stats = SessionStats {
             duration_ms: 1000,
             wpm_net: 30.0,
@@ -500,11 +521,17 @@ mod tests {
             ..SessionStats::default()
         };
         // Deux sessions terminées (20 et 40 MPM), puis une en cours.
-        let a = start(&pool, &profile, &text, "{}").await.unwrap();
+        let a = start(&pool, &profile, Some(&text), MODE_COPY, "{}")
+            .await
+            .unwrap();
         finish(&pool, &a.id, &stats(20.0), &[]).await.unwrap();
-        let b = start(&pool, &profile, &text, "{}").await.unwrap();
+        let b = start(&pool, &profile, Some(&text), MODE_COPY, "{}")
+            .await
+            .unwrap();
         finish(&pool, &b.id, &stats(40.0), &[]).await.unwrap();
-        start(&pool, &profile, &text, "{}").await.unwrap();
+        start(&pool, &profile, Some(&text), MODE_COPY, "{}")
+            .await
+            .unwrap();
 
         // En excluant B, seule A reste ; la limite est respectée.
         let recent = recent_stats(&pool, &profile, &b.id, 10).await.unwrap();

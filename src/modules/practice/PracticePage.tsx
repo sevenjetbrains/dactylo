@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useSearchParams } from 'react-router';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 
 import {
   commands,
@@ -47,6 +47,9 @@ function messageOf(e: unknown): string {
   return isApiError(e) || e instanceof Error ? e.message : String(e);
 }
 
+/** Chemin de la page Révision, où ramène la fin d'une session de révision. */
+const REVIEW_PATH = '/review';
+
 /** Mode Copie (F-01 à F-07, F-32) et reprise d'une session interrompue (NF-06). */
 export default function PracticePage() {
   const { t, i18n } = useTranslation('practice');
@@ -57,6 +60,12 @@ export default function PracticePage() {
   const exerciseParam = Number(params.get('exercise'));
   const requestedExercise = exerciseParam >= 1 ? exerciseParam - 1 : null;
   const navigate = useNavigate();
+  // Exercice de révision généré, transmis dans l'état de navigation (ADR 0018). La clé
+  // de navigation relance la page si le même exercice est redemandé.
+  const location = useLocation();
+  const generated: unknown = (location.state as { review?: unknown } | null)?.review;
+  const reviewContent = typeof generated === 'string' ? generated : null;
+  const reviewKey = reviewContent === null ? null : location.key;
 
   // État local : étape, largeur en colonnes, débuts de ligne, horloge du bandeau.
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' });
@@ -79,28 +88,37 @@ export default function PracticePage() {
   /**
    * Démarre une nouvelle session sur le texte donné (ou le plus récent), sur
    * l'exercice donné (à partir de 0) ou, à défaut, sur le prochain à faire (F-24).
+   * Avec `generated`, démarre une révision sur ce texte (ADR 0018).
    */
-  const begin = useCallback(async (textId: string | null, exercise: number | null = null) => {
-    const token = ++request.current;
-    setPhase({ kind: 'loading' });
-    setLineStarts(null);
-    try {
-      // Les frappes de la session précédente partent avant qu'elle soit abandonnée.
-      await waitForSync();
-      const start = await unwrap(commands.startSession(textId, exercise));
-      if (token !== request.current) return;
-      usePracticeStore.getState().load(start);
-      setPhase({ kind: 'session' });
-    } catch (e) {
-      if (token !== request.current) return;
-      // Aucun texte du tout : on propose la bibliothèque plutôt qu'une erreur.
-      setPhase(
-        isApiError(e) && e.code === 'notFound' && textId === null
-          ? { kind: 'empty' }
-          : { kind: 'error', message: messageOf(e) },
-      );
-    }
-  }, []);
+  const begin = useCallback(
+    async (
+      textId: string | null,
+      exercise: number | null = null,
+      generated: string | null = null,
+    ) => {
+      const token = ++request.current;
+      setPhase({ kind: 'loading' });
+      setLineStarts(null);
+      try {
+        // Les frappes de la session précédente partent avant qu'elle soit abandonnée.
+        await waitForSync();
+        const start = await unwrap(commands.startSession(textId, exercise, generated));
+        if (token !== request.current) return;
+        usePracticeStore.getState().load(start);
+        setPhase({ kind: 'session' });
+      } catch (e) {
+        if (token !== request.current) return;
+        // Aucun texte du tout : on propose la bibliothèque plutôt qu'une erreur.
+        const noText = isApiError(e) && e.code === 'notFound' && textId === null;
+        setPhase(
+          noText && generated === null
+            ? { kind: 'empty' }
+            : { kind: 'error', message: messageOf(e) },
+        );
+      }
+    },
+    [],
+  );
 
   // Ouverture : sans texte demandé (menu « Copie »), une session interrompue est
   // proposée à la reprise (NF-06). Un texte choisi dans la bibliothèque démarre
@@ -109,6 +127,16 @@ export default function PracticePage() {
   useEffect(() => {
     const requests = request;
     const token = ++requests.current;
+    // Révision demandée : elle remplace toute session interrompue. Le démarrage part
+    // hors du corps de l'effet, comme la réponse de `pendingSession` ci-dessous.
+    if (reviewContent !== null) {
+      void Promise.resolve().then(() => {
+        if (token === requests.current) void begin(null, null, reviewContent);
+      });
+      return () => {
+        requests.current++;
+      };
+    }
     unwrap(commands.pendingSession())
       .then((pending) => {
         if (token !== requests.current) return;
@@ -122,7 +150,7 @@ export default function PracticePage() {
     return () => {
       requests.current++;
     };
-  }, [requested, requestedExercise, begin]);
+  }, [requested, requestedExercise, reviewContent, reviewKey, begin]);
 
   // En quittant la page, les frappes en attente sont envoyées ; la session reste reprenable.
   const flushRef = useRef(flush);
@@ -198,7 +226,9 @@ export default function PracticePage() {
         .then(() => unwrap(commands.abandonSession(current.sessionId)))
         .catch(() => undefined);
     }
-    return { textId: current.textId, exercise: current.exercise.index, token, dropped };
+    // Une révision n'a pas de texte stocké : on la relance sur son propre contenu.
+    const generated = current.mode === 'review' ? current.graphemes.join('') : null;
+    return { textId: current.textId, exercise: current.exercise.index, generated, token, dropped };
   }, [flush]);
 
   /** Recommence le même exercice (Ctrl+R) après abandon de la session en cours. */
@@ -206,7 +236,9 @@ export default function PracticePage() {
     const current = dropCurrent();
     if (!current) return;
     await current.dropped;
-    if (current.token === request.current) await begin(current.textId, current.exercise);
+    if (current.token === request.current) {
+      await begin(current.textId, current.exercise, current.generated);
+    }
   }, [dropCurrent, begin]);
 
   /** Enchaîne sur l'exercice `index` du même texte, depuis l'écran de fin. */
@@ -220,18 +252,27 @@ export default function PracticePage() {
     [dropCurrent, begin],
   );
 
-  /** Passe au texte suivant (Ctrl+Entrée) ; reste sur le même s'il est seul. */
+  /**
+   * Passe au texte suivant (Ctrl+Entrée) ; reste sur le même s'il est seul.
+   * Après une révision, revient à la page Révision.
+   */
   const next = useCallback(async () => {
     const current = dropCurrent();
     if (!current) return;
+    const textId = current.textId;
+    if (textId === null) {
+      await current.dropped;
+      if (current.token === request.current) navigate(REVIEW_PATH);
+      return;
+    }
     const [nextId] = await Promise.all([
-      unwrap(commands.nextTextId(current.textId)).catch(() => null),
+      unwrap(commands.nextTextId(textId)).catch(() => null),
       current.dropped,
     ]);
     // Page quittée ou autre action lancée entre-temps.
     if (current.token !== request.current) return;
     // Changer l'URL relance la page ; même URL : on redémarre directement.
-    const target = nextId ?? current.textId;
+    const target = nextId ?? textId;
     if (target !== requested) navigate(`/practice?text=${encodeURIComponent(target)}`);
     else await begin(target);
   }, [dropCurrent, begin, navigate, requested]);
@@ -299,11 +340,18 @@ export default function PracticePage() {
     }
   };
 
-  /** Abandonne la session interrompue et recommence à zéro le même texte et exercice. */
+  /**
+   * Abandonne la session interrompue et recommence à zéro le même texte et exercice ;
+   * pour une révision, revient à la page Révision choisir un nouvel exercice.
+   */
   const discard = async (pending: PendingSession) => {
     await unwrap(commands.abandonSession(pending.sessionId)).catch(() => undefined);
-    await begin(pending.textId, pending.exercise.index);
+    if (pending.textId == null) navigate(REVIEW_PATH);
+    else await begin(pending.textId, pending.exercise.index);
   };
+
+  // Titre de la session : celui du texte, ou celui des révisions (pas de texte stocké).
+  const sessionTitle = session?.mode === 'review' ? t('reviewTitle') : session?.title;
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-5">
@@ -320,7 +368,7 @@ export default function PracticePage() {
         </Eyebrow>
         <h1 className="mt-1 text-3xl font-bold tracking-tight">
           {phase.kind === 'session' || phase.kind === 'summary'
-            ? (session?.title ?? t('title'))
+            ? (sessionTitle ?? t('title'))
             : t('title')}
         </h1>
       </header>
@@ -350,7 +398,7 @@ export default function PracticePage() {
           <CardTitle>{t('resume.title')}</CardTitle>
           <p className="mb-4 text-muted-foreground">
             {t('resume.body', {
-              title: phase.pending.title,
+              title: phase.pending.title || t('reviewTitle'),
               progress: formatNumber((phase.pending.progress ?? 0) * 100, i18n.language),
             })}
           </p>

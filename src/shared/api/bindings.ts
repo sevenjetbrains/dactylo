@@ -33,8 +33,11 @@ export const commands = {
 	getPracticeSettings: () => typedError<PracticeSettings_Serialize, ApiError>(__TAURI_INVOKE("get_practice_settings")),
 	/**  Commande : enregistre les réglages du mode Copie. */
 	savePracticeSettings: (settings: PracticeSettings_Deserialize) => typedError<PracticeSettings_Serialize, ApiError>(__TAURI_INVOKE("save_practice_settings", { settings })),
-	/**  Commande : démarre une session de copie, sur un exercice précis ou le prochain. */
-	startSession: (textId: string | null, exercise: number | null) => typedError<SessionStart_Serialize, ApiError>(__TAURI_INVOKE("start_session", { textId, exercise })),
+	/**
+	 *  Commande : démarre une session de copie, sur un exercice précis ou le prochain ;
+	 *  ou une révision sur le texte `generated` (ADR 0018).
+	 */
+	startSession: (textId: string | null, exercise: number | null, generated: string | null) => typedError<SessionStart_Serialize, ApiError>(__TAURI_INVOKE("start_session", { textId, exercise, generated })),
 	/**  Commande : enregistre un lot de frappes (F-31). */
 	recordKeystrokes: (sessionId: string, keystrokes: Keystroke_Deserialize[]) => typedError<number | null, ApiError>(__TAURI_INVOKE("record_keystrokes", { sessionId, keystrokes })),
 	/**  Commande : clôt la session et renvoie le résumé (F-30, F-32). */
@@ -42,7 +45,7 @@ export const commands = {
 	/**  Commande : abandonne une session. */
 	abandonSession: (sessionId: string) => typedError<null, ApiError>(__TAURI_INVOKE("abandon_session", { sessionId })),
 	/**  Commande : session à reprendre, s'il y en a une. */
-	pendingSession: () => typedError<PendingSession | null, ApiError>(__TAURI_INVOKE("pending_session")),
+	pendingSession: () => typedError<PendingSession_Serialize | null, ApiError>(__TAURI_INVOKE("pending_session")),
 	/**  Commande : reprend une session interrompue. */
 	resumeSession: (sessionId: string) => typedError<SessionStart_Serialize, ApiError>(__TAURI_INVOKE("resume_session", { sessionId })),
 	/**  Commande : découpe le texte de la session en lignes. */
@@ -487,12 +490,35 @@ export type PdfText_Serialize = {
 };
 
 /**  Session interrompue proposée à la reprise (NF-06). */
-export type PendingSession = {
+export type PendingSession = PendingSession_Serialize | PendingSession_Deserialize;
+
+/**  Session interrompue proposée à la reprise (NF-06). */
+export type PendingSession_Deserialize = {
 	/**  Identifiant de la session. */
 	sessionId: string,
 	/**  Texte de la session : un autre texte demandé ne propose pas cette reprise. */
-	textId: string,
-	/**  Titre du texte. */
+	textId?: string | null,
+	/**  Copie ou révision. */
+	mode: SessionMode,
+	/**  Titre du texte ; vide pour une révision. */
+	title: string,
+	/**  Exercice interrompu. */
+	exercise: ExerciseInfo,
+	/**  Avancement dans l'exercice, de 0 à 1. */
+	progress: number | null,
+	/**  Début, en ms Unix. */
+	startedAt: number,
+};
+
+/**  Session interrompue proposée à la reprise (NF-06). */
+export type PendingSession_Serialize = {
+	/**  Identifiant de la session. */
+	sessionId: string,
+	/**  Texte de la session : un autre texte demandé ne propose pas cette reprise. */
+	textId: string | null,
+	/**  Copie ou révision. */
+	mode: SessionMode,
+	/**  Titre du texte ; vide pour une révision. */
 	title: string,
 	/**  Exercice interrompu. */
 	exercise: ExerciseInfo,
@@ -634,6 +660,16 @@ minutes: number } |
 /**  Nombre de mots à taper. */
 count: number };
 
+/**
+ *  Nature d'une session : copie d'un texte de la bibliothèque, ou révision sur un
+ *  texte généré à partir des mots difficiles (ADR 0018).
+ */
+export type SessionMode = 
+/**  Texte de la bibliothèque. */
+"copy" | 
+/**  Exercice de révision généré (F-44). */
+"review";
+
 /**  Tout ce qu'il faut à l'interface pour afficher une session. */
 export type SessionStart = SessionStart_Serialize | SessionStart_Deserialize;
 
@@ -641,9 +677,11 @@ export type SessionStart = SessionStart_Serialize | SessionStart_Deserialize;
 export type SessionStart_Deserialize = {
 	/**  Identifiant de la session. */
 	sessionId: string,
-	/**  Texte tapé. */
-	textId: string,
-	/**  Titre du texte. */
+	/**  Texte tapé ; `None` pour une révision. */
+	textId?: string | null,
+	/**  Copie ou révision. */
+	mode: SessionMode,
+	/**  Titre du texte ; vide pour une révision (l'interface affiche le sien). */
 	title: string,
 	/**  Exercice tapé (F-24). */
 	exercise: ExerciseInfo,
@@ -663,9 +701,11 @@ export type SessionStart_Deserialize = {
 export type SessionStart_Serialize = {
 	/**  Identifiant de la session. */
 	sessionId: string,
-	/**  Texte tapé. */
-	textId: string,
-	/**  Titre du texte. */
+	/**  Texte tapé ; `None` pour une révision. */
+	textId: string | null,
+	/**  Copie ou révision. */
+	mode: SessionMode,
+	/**  Titre du texte ; vide pour une révision (l'interface affiche le sien). */
 	title: string,
 	/**  Exercice tapé (F-24). */
 	exercise: ExerciseInfo,
@@ -708,8 +748,10 @@ export type SessionSummary = SessionSummary_Serialize | SessionSummary_Deseriali
 export type SessionSummary_Deserialize = {
 	/**  Identifiant de la session. */
 	sessionId: string,
-	/**  Texte tapé, pour enchaîner sur le suivant. */
-	textId: string,
+	/**  Texte tapé, pour enchaîner sur le suivant ; `None` pour une révision. */
+	textId?: string | null,
+	/**  Copie ou révision. */
+	mode: SessionMode,
 	/**  Exercice tapé. */
 	exercise: ExerciseInfo,
 	/**  Exercice suivant du même texte, s'il y en a un. */
@@ -726,8 +768,10 @@ export type SessionSummary_Deserialize = {
 export type SessionSummary_Serialize = {
 	/**  Identifiant de la session. */
 	sessionId: string,
-	/**  Texte tapé, pour enchaîner sur le suivant. */
-	textId: string,
+	/**  Texte tapé, pour enchaîner sur le suivant ; `None` pour une révision. */
+	textId: string | null,
+	/**  Copie ou révision. */
+	mode: SessionMode,
 	/**  Exercice tapé. */
 	exercise: ExerciseInfo,
 	/**  Exercice suivant du même texte, s'il y en a un. */

@@ -14,6 +14,7 @@ import { SessionSummary } from './SessionSummary';
 const summary: Summary = {
   sessionId: 's1',
   textId: 't1',
+  mode: 'copy',
   stats: {
     durationMs: 65_000,
     typed: 300,

@@ -1,6 +1,7 @@
 {
   "menu": "Copie",
   "title": "Copie",
+  "reviewTitle": "Révision des mots difficiles",
   "typingInput": "Zone de frappe",
   "paused": "En pause — appuyez sur Échap pour reprendre.",
   "saving": "Enregistrement de la session…",
@@ -42,7 +43,8 @@
     "restart": "Recommencer",
     "next": "Texte suivant",
     "library": "Bibliothèque",
-    "nextExercise": "Exercice suivant ({{current}} sur {{count}})"
+    "nextExercise": "Exercice suivant ({{current}} sur {{count}})",
+    "backToReview": "Retour à la révision"
   },
   "errorType": {
     "accent": "accent",

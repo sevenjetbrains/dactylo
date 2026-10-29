@@ -61,6 +61,7 @@ function sessionStart(overrides: Record<string, unknown> = {}) {
   return {
     sessionId: 's1',
     textId: 't1',
+    mode: 'copy',
     title: 'Le chat',
     exercise: { index: 0, count: 1 },
     graphemes: splitGraphemes('le chat'),
@@ -79,6 +80,7 @@ function sessionStart(overrides: Record<string, unknown> = {}) {
 const summary = {
   sessionId: 's1',
   textId: 't1',
+  mode: 'copy',
   stats: {
     durationMs: 3_000,
     typed: 7,
@@ -95,8 +97,8 @@ const summary = {
   nextExercise: null,
 };
 
-/** Rend la page à l'URL donnée. */
-function renderPage(entry = '/practice?text=t1') {
+/** Rend la page à l'URL donnée (ou à une entrée avec état de navigation). */
+function renderPage(entry: string | { pathname: string; state: unknown } = '/practice?text=t1') {
   return render(
     <MemoryRouter initialEntries={[entry]}>
       <PracticePage />
@@ -135,7 +137,7 @@ describe('PracticePage', () => {
   it('joue une session complète puis affiche le résumé (F-32)', async () => {
     renderPage();
     const input = await screen.findByLabelText('Zone de frappe');
-    expect(api.startSession).toHaveBeenCalledWith('t1', null);
+    expect(api.startSession).toHaveBeenCalledWith('t1', null, null);
     expect(screen.getByLabelText('Statistiques en direct')).toBeInTheDocument();
 
     // « x » à la place de « e », puis le reste juste jusqu'à la fin du texte.
@@ -194,7 +196,7 @@ describe('PracticePage', () => {
     renderPage();
     await screen.findByLabelText('Zone de frappe');
     fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true });
-    await waitFor(() => expect(api.startSession).toHaveBeenLastCalledWith('t2', null));
+    await waitFor(() => expect(api.startSession).toHaveBeenLastCalledWith('t2', null, null));
     expect(api.nextTextId).toHaveBeenCalledWith('t1');
   });
 
@@ -291,7 +293,7 @@ describe('PracticePage', () => {
     await screen.findByLabelText('Zone de frappe');
     // Le texte et l'exercice interrompus repartent de zéro.
     expect(api.abandonSession).toHaveBeenCalledWith('s0');
-    expect(api.startSession).toHaveBeenCalledWith('t1', 0);
+    expect(api.startSession).toHaveBeenCalledWith('t1', 0, null);
   });
 
   it('S’entraîner sur le texte interrompu démarre une nouvelle session', async () => {
@@ -308,7 +310,7 @@ describe('PracticePage', () => {
     // Lien de la bibliothèque vers le même texte : pas de proposition de reprise.
     renderPage('/practice?text=t1');
     await screen.findByLabelText('Zone de frappe');
-    expect(api.startSession).toHaveBeenCalledWith('t1', null);
+    expect(api.startSession).toHaveBeenCalledWith('t1', null, null);
     expect(screen.queryByText('Session interrompue')).not.toBeInTheDocument();
   });
 
@@ -329,17 +331,17 @@ describe('PracticePage', () => {
     // `exercise=2` dans l'URL : deuxième exercice (rang 1).
     renderPage('/practice?text=t1&exercise=2');
     await screen.findByLabelText('Zone de frappe');
-    expect(api.startSession).toHaveBeenCalledWith('t1', 1);
+    expect(api.startSession).toHaveBeenCalledWith('t1', 1, null);
     expect(screen.getByText('Copie · Exercice 2 sur 3')).toBeInTheDocument();
     // Ctrl+R recommence le même exercice.
     fireEvent.keyDown(window, { key: 'r', ctrlKey: true });
-    await waitFor(() => expect(api.startSession).toHaveBeenLastCalledWith('t1', 1));
+    await waitFor(() => expect(api.startSession).toHaveBeenLastCalledWith('t1', 1, null));
     // Exercice fini : le bouton de l'écran de fin passe au suivant.
     type(await screen.findByLabelText('Zone de frappe'), 'le chat');
     await userEvent.click(
       await screen.findByRole('button', { name: 'Exercice suivant (3 sur 3)' }),
     );
-    await waitFor(() => expect(api.startSession).toHaveBeenLastCalledWith('t1', 2));
+    await waitFor(() => expect(api.startSession).toHaveBeenLastCalledWith('t1', 2, null));
   });
 
   it('démarre directement un autre texte demandé, sans proposer l’ancienne session', async () => {
@@ -356,8 +358,48 @@ describe('PracticePage', () => {
     );
     renderPage('/practice?text=t1');
     await screen.findByLabelText('Zone de frappe');
-    expect(api.startSession).toHaveBeenCalledWith('t1', null);
+    expect(api.startSession).toHaveBeenCalledWith('t1', null, null);
     expect(screen.queryByText(/Ancien texte/)).not.toBeInTheDocument();
+  });
+
+  it('lance une révision sur le texte reçu, puis la recommence sur le même texte (ADR 0018)', async () => {
+    // Une session interrompue existe, mais la révision demandée passe avant.
+    api.pendingSession.mockReturnValue(
+      ok({ sessionId: 's0', textId: 't0', mode: 'copy', title: 'Ancien texte' }),
+    );
+    // Chaque démarrage renvoie une nouvelle session (le découpage en lignes en dépend).
+    let started = 0;
+    api.startSession.mockImplementation(() =>
+      ok(
+        sessionStart({
+          sessionId: `r${++started}`,
+          textId: null,
+          mode: 'review',
+          title: '',
+          graphemes: splitGraphemes('œuvre'),
+          words: [{ start: 0, end: 5 }],
+        }),
+      ),
+    );
+    api.finishSession.mockReturnValue(ok({ ...summary, textId: null, mode: 'review' }));
+    renderPage({ pathname: '/practice', state: { review: 'œuvre' } });
+    const input = await screen.findByLabelText('Zone de frappe');
+    expect(api.startSession).toHaveBeenCalledWith(null, null, 'œuvre');
+    expect(api.pendingSession).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('heading', { name: 'Révision des mots difficiles' }),
+    ).toBeInTheDocument();
+
+    // Ctrl+R : la révision repart sur son propre contenu.
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r', ctrlKey: true }));
+    await waitFor(() => expect(api.startSession).toHaveBeenCalledTimes(2));
+    expect(api.startSession).toHaveBeenLastCalledWith(null, 0, 'œuvre');
+
+    // Fin : le bouton suivant ramène à la révision.
+    const restarted = await screen.findByLabelText('Zone de frappe');
+    expect(restarted).not.toBe(input);
+    type(restarted, 'œuvre');
+    expect(await screen.findByRole('button', { name: 'Retour à la révision' })).toBeInTheDocument();
   });
 
   it('renvoie vers la bibliothèque quand il n’y a aucun texte', async () => {

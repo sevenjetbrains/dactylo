@@ -49,7 +49,9 @@ async fn play(
     typed: &str,
 ) -> (String, SessionWords) {
     let text_id = add_text(state, text).await;
-    let start = practice::start(state, Some(text_id), None).await.unwrap();
+    let start = practice::start(state, Some(text_id), None, None)
+        .await
+        .unwrap();
     practice::record(state, &start.session_id, &keys(typed))
         .await
         .unwrap();
@@ -300,7 +302,9 @@ async fn subscriber_applies_completed_sessions() {
         &state.bus,
     )));
     let text_id = add_text(&state, "une fête").await;
-    let start = practice::start(&state, Some(text_id), None).await.unwrap();
+    let start = practice::start(&state, Some(text_id), None, None)
+        .await
+        .unwrap();
     practice::record(&state, &start.session_id, &keys("une fete"))
         .await
         .unwrap();

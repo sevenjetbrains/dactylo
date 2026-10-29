@@ -16,7 +16,7 @@ interface Props {
   summary: Summary;
   /** Recommencer le même texte. */
   onRestart: () => void;
-  /** Passer au texte suivant. */
+  /** Passer au texte suivant (ou revenir à la révision après une révision). */
   onNext: () => void;
   /** Passer à l'exercice `index` du même texte (F-24). */
   onNextExercise: (index: number) => void;
@@ -120,7 +120,7 @@ export function SessionSummary({ summary, onRestart, onNext, onNextExercise }: P
           {t('summary.restart')}
         </Button>
         <Button variant="outline" onClick={onNext}>
-          {t('summary.next')}
+          {summary.mode === 'review' ? t('summary.backToReview') : t('summary.next')}
         </Button>
         <Link to="/library" className="inline-flex h-9 items-center px-2 text-sm underline">
           {t('summary.library')}

@@ -299,7 +299,9 @@ mod tests {
         let text = texts::create(&pool, TextRecord::pasted("T", "fête"))
             .await
             .unwrap();
-        let session = sessions::start(&pool, &profile, &text, "{}").await.unwrap();
+        let session = sessions::start(&pool, &profile, Some(&text), sessions::MODE_COPY, "{}")
+            .await
+            .unwrap();
         let mut conn = pool.acquire().await.unwrap();
         // « fête » à revoir après « œuvre » ; un mot non suivi n'apparaît pas.
         let fete = save(&mut conn, &profile, None, &WordRecord::added("fête", 2_000))
