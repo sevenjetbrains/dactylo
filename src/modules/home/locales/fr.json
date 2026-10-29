@@ -12,5 +12,51 @@
   "continue": "Continuer",
   "startEyebrow": "Copie",
   "exercise": "Exercice {{current}} sur {{count}}",
-  "importPdf": "Importer un PDF"
+  "importPdf": "Importer un PDF",
+  "reviewResumeTitle": "Révision des mots difficiles",
+  "review": {
+    "eyebrow": "Révision du jour",
+    "estimate": "≈ {{minutes}} min",
+    "due_one": "1 mot à réviser aujourd'hui",
+    "due_other": "{{count}} mots à réviser aujourd'hui",
+    "upToDate": "Révision à jour",
+    "upToDateBody": "Aucun mot à revoir aujourd'hui. Les prochains reviendront à leur date.",
+    "none": "Aucun mot difficile",
+    "noneBody": "Les mots mal tapés, ou tapés lentement, apparaîtront ici pour être révisés.",
+    "start": "Réviser maintenant",
+    "open": "Ouvrir la révision"
+  },
+  "tiles": {
+    "speed": "Vitesse moyenne",
+    "wpm": "MPM",
+    "speedDelta": "{{delta}} sur 10 sessions",
+    "accuracy": "Précision",
+    "accuracyDelta": "{{delta}} pt",
+    "lastSessions": "Sur les 10 dernières sessions",
+    "streak": "Série",
+    "days_one": "jour",
+    "days_other": "jours",
+    "record_one": "Record : {{count}} jour",
+    "record_other": "Record : {{count}} jours",
+    "week": "Cette semaine",
+    "sessions_zero": "Aucune session",
+    "sessions_one": "1 session",
+    "sessions_other": "{{count}} sessions"
+  },
+  "recent": {
+    "title": "Sessions récentes",
+    "all": "Tout voir",
+    "empty": "Aucune session terminée pour l'instant.",
+    "date": "Date",
+    "text": "Texte",
+    "mode": "Mode",
+    "wpm": "MPM",
+    "accuracy": "Précision",
+    "reviewTitle": "Révision des mots difficiles",
+    "modes": {
+      "copy": "Copie",
+      "dictation": "Dictée",
+      "review": "Révision"
+    }
+  }
 }

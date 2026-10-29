@@ -1,15 +1,32 @@
 /** Page d'accueil. */
 
 import { ClipboardPaste, FileText, Keyboard } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
-import { commands, unwrap, type PendingSession, type Profile } from '@/shared/api';
+import {
+  commands,
+  unwrap,
+  type Dashboard_Serialize as Dashboard,
+  type PendingSession,
+  type Profile,
+  type RecentSession_Serialize as RecentSession,
+  type ReviewOverview,
+} from '@/shared/api';
+import { tzOffsetMinutes } from '@/shared/lib/dates';
+import { useDomainEvent } from '@/shared/lib/use-domain-event';
 import { cn } from '@/shared/lib/utils';
 import { buttonVariants } from '@/shared/ui/button-variants';
 import { Card, Eyebrow } from '@/shared/ui/card';
 import { ProgressBar } from '@/shared/ui/progress-bar';
+
+import { RecentSessions } from './RecentSessions';
+import { ReviewCard } from './ReviewCard';
+import { StatTiles } from './StatTiles';
+
+/** Sessions récentes affichées (maquette : 3). */
+const RECENT_COUNT = 3;
 
 /** Date du jour en toutes lettres (« Mardi 27 octobre »), avec une majuscule initiale. */
 function today(language: string): string {
@@ -22,15 +39,22 @@ function today(language: string): string {
 }
 
 /**
- * Accueil : salutation, reprise d'une session interrompue et accès à la copie.
- * Les cartes Révision et Dictée et les statistiques des maquettes arriveront
- * avec leurs phases (3 et 4).
+ * Accueil : salutation, révision du jour (F-43), reprise d'une session interrompue
+ * ou accès à la copie, tuiles de statistiques et sessions récentes. La carte
+ * Dictée des maquettes arrivera avec la Phase 4.
  */
 export default function HomePage() {
   const { t, i18n } = useTranslation('home');
   const [profile, setProfile] = useState<Profile | null>(null);
   const [pending, setPending] = useState<PendingSession | null>(null);
+  const [overview, setOverview] = useState<ReviewOverview | null>(null);
+  const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [recent, setRecent] = useState<RecentSession[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Chaque incrément recharge la révision du jour (mots changés en tâche de fond).
+  const [wordsVersion, setWordsVersion] = useState(0);
+  const reloadWords = useCallback(() => setWordsVersion((v) => v + 1), []);
+  useDomainEvent('wordsUpdated', reloadWords);
 
   useEffect(() => {
     // `active` ignore les réponses arrivées après le démontage de la page.
@@ -44,10 +68,28 @@ export default function HomePage() {
     unwrap(commands.pendingSession())
       .then((p) => active && setPending(p))
       .catch(fail);
+    // Tuiles (tous les temps) et dernières sessions.
+    unwrap(commands.statsDashboard('all', tzOffsetMinutes()))
+      .then((d) => active && setDashboard(d))
+      .catch(fail);
+    unwrap(commands.recentSessions(RECENT_COUNT))
+      .then((r) => active && setRecent(r))
+      .catch(fail);
     return () => {
       active = false;
     };
   }, []);
+
+  // Révision du jour, rechargée quand les mots changent (fin de session, ajout…).
+  useEffect(() => {
+    let active = true;
+    unwrap(commands.reviewOverview(tzOffsetMinutes()))
+      .then((o) => active && setOverview(o))
+      .catch((e: unknown) => active && setError(e instanceof Error ? e.message : String(e)));
+    return () => {
+      active = false;
+    };
+  }, [wordsVersion]);
 
   // Avancement de la session interrompue, en pourcentage entier.
   const progress = Math.round((pending?.progress ?? 0) * 100);
@@ -82,8 +124,9 @@ export default function HomePage() {
         </p>
       )}
 
-      {/* Cartes d'action ; la grille accueillera la révision et la dictée. */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      {/* Cartes d'action : révision du jour, puis copie ; la dictée viendra en Phase 4. */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ReviewCard overview={overview} />
         {pending ? (
           // Reprise d'une session interrompue : titre, avancement et bouton Continuer.
           <Card className="flex flex-col gap-4">
@@ -92,7 +135,8 @@ export default function HomePage() {
               {t('resumeEyebrow')}
             </Eyebrow>
             <div>
-              <h2 className="text-xl font-bold">{pending.title}</h2>
+              {/* Une révision n'a pas de titre stocké. */}
+              <h2 className="text-xl font-bold">{pending.title || t('reviewResumeTitle')}</h2>
               {/* Exercice interrompu, pour un texte découpé (F-24). */}
               {pending.exercise.count > 1 && (
                 <p className="text-sm text-muted-foreground">
@@ -134,6 +178,10 @@ export default function HomePage() {
           </Card>
         )}
       </div>
+
+      {/* Tuiles de statistiques et dernières sessions (F-33). */}
+      {dashboard && <StatTiles dashboard={dashboard} />}
+      <RecentSessions sessions={recent} />
     </div>
   );
 }

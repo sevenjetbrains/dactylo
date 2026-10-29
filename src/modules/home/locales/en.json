@@ -12,5 +12,51 @@
   "continue": "Continue",
   "startEyebrow": "Copy",
   "exercise": "Exercise {{current}} of {{count}}",
-  "importPdf": "Import a PDF"
+  "importPdf": "Import a PDF",
+  "reviewResumeTitle": "Difficult words review",
+  "review": {
+    "eyebrow": "Today's review",
+    "estimate": "≈ {{minutes}} min",
+    "due_one": "1 word to review today",
+    "due_other": "{{count}} words to review today",
+    "upToDate": "Review up to date",
+    "upToDateBody": "No words to go over today. The next ones will come back on their date.",
+    "none": "No difficult words",
+    "noneBody": "Words you mistype, or type slowly, will show up here for review.",
+    "start": "Review now",
+    "open": "Open review"
+  },
+  "tiles": {
+    "speed": "Average speed",
+    "wpm": "WPM",
+    "speedDelta": "{{delta}} over 10 sessions",
+    "accuracy": "Accuracy",
+    "accuracyDelta": "{{delta}} pt",
+    "lastSessions": "Over the last 10 sessions",
+    "streak": "Streak",
+    "days_one": "day",
+    "days_other": "days",
+    "record_one": "Best: {{count}} day",
+    "record_other": "Best: {{count}} days",
+    "week": "This week",
+    "sessions_zero": "No sessions",
+    "sessions_one": "1 session",
+    "sessions_other": "{{count}} sessions"
+  },
+  "recent": {
+    "title": "Recent sessions",
+    "all": "See all",
+    "empty": "No completed session yet.",
+    "date": "Date",
+    "text": "Text",
+    "mode": "Mode",
+    "wpm": "WPM",
+    "accuracy": "Accuracy",
+    "reviewTitle": "Difficult words review",
+    "modes": {
+      "copy": "Copy",
+      "dictation": "Dictation",
+      "review": "Review"
+    }
+  }
 }
