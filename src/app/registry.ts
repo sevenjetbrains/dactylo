@@ -1,5 +1,6 @@
 /** Registre central des modules de l'application. */
 
+import { dictation } from '@/modules/dictation';
 import { home } from '@/modules/home';
 import { library } from '@/modules/library';
 import { practice } from '@/modules/practice';
@@ -15,6 +16,7 @@ import type { ModuleManifest } from './types';
  */
 export const modules: readonly ModuleManifest[] = [
   home,
+  dictation,
   library,
   practice,
   review,

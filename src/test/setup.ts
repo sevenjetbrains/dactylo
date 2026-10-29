@@ -12,6 +12,9 @@ import { initI18n } from '@/i18n';
  * (`src/modules/<id>/locales/<langue>.json`). Le registre n'est pas importé ici :
  * il chargerait le vrai client `@/shared/api` (pastille du menu) avant que chaque
  * fichier de test ait pu le simuler avec `vi.mock`.
+ *
+ * Après l'ajout d'un dossier de module, vider `node_modules/.vitest-cache` : le
+ * cache de transformation de Vitest garde sinon l'ancienne liste de fichiers.
  */
 const files = import.meta.glob<Record<string, unknown>>('../modules/*/locales/*.json', {
   eager: true,

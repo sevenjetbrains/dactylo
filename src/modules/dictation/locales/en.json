@@ -1,0 +1,143 @@
+{
+  "menu": "Dictation",
+  "eyebrow_one": "Dictation · 1 word",
+  "eyebrow_other": "Dictation · {{count}} words",
+  "exercise": "exercise {{current}} of {{count}}",
+  "empty": {
+    "title": "No text to dictate",
+    "body": "Add a text to the library, or use one from the built-in pack.",
+    "action": "Open the library"
+  },
+  "resume": {
+    "title": "Interrupted dictation",
+    "body": "Your dictation of “{{title}}” stopped at {{typed}} words out of {{total}}. Resume it?",
+    "continue": "Resume",
+    "discard": "Start over"
+  },
+  "speechError": "Cannot read aloud: {{message}}",
+  "copy": {
+    "title": "Your copy",
+    "hidden": "Text hidden until the correction",
+    "typed_one": "1 word typed",
+    "typed_other": "{{count}} words typed",
+    "adaptiveHint_zero": "the next segment is read as soon as you have typed everything",
+    "adaptiveHint_one": "the next segment is read once you have typed 1 more word",
+    "adaptiveHint_other": "the next segment is read once you have typed {{count}} more words",
+    "automaticHint": "the next segment is read {{seconds}} s after the previous one",
+    "finish": "Finish and correct"
+  },
+  "shortcuts": "Shortcuts: Esc pause or resume · Ctrl Space repeat · Ctrl ← previous segment.",
+  "banner": {
+    "label": "Dictation playback",
+    "start": "Start the dictation",
+    "continue": "Continue the dictation",
+    "pause": "Pause",
+    "resume": "Resume reading",
+    "segment": "Segment {{current}} of {{total}}",
+    "status": {
+      "ready": "ready",
+      "speaking": "reading",
+      "listening": "your turn to type",
+      "paused": "paused",
+      "ended": "every segment has been read",
+      "finishing": "correcting…"
+    },
+    "repeatsUnlimited": "Repetitions: {{used}} / unlimited",
+    "repeatsLimited": "Repetitions: {{used}} / {{max}}",
+    "previous": "Previous segment",
+    "repeat": "Repeat",
+    "repeatKey": "Ctrl Space"
+  },
+  "sidebar": {
+    "title": "Settings",
+    "profile": "Dictation profile",
+    "customProfile": "Custom",
+    "voice": "Voice",
+    "defaultVoice": "System French voice",
+    "rate": "Speed",
+    "rateValue": "{{value}}×",
+    "pause": "Pause between segments",
+    "pauseValue": "{{value}} s",
+    "segmentation": "Segments",
+    "group_one": "Group of {{count}}",
+    "group_other": "Group of {{count}}",
+    "modes": {
+      "word": "Word",
+      "group": "Group",
+      "sentence": "Sentence",
+      "paragraph": "Paragraph"
+    },
+    "segmentationLocked": "Segments can change before the first reading, or for the next dictation.",
+    "advance": "Advance",
+    "advances": {
+      "adaptive": "Adaptive (follows my typing)",
+      "automatic": "Automatic (fixed time)"
+    },
+    "readPunctuation": "Read punctuation aloud",
+    "readPunctuationHint": "“comma”, “full stop”, “new line” (in French)"
+  },
+  "correction": {
+    "eyebrow": "Dictation complete",
+    "title_zero": "No mistakes in {{words}} words.",
+    "title_one": "1 mistake in {{words}} words.",
+    "title_other": "{{count}} mistakes in {{words}} words.",
+    "praise": {
+      "excellent": "Excellent!",
+      "good": "Well done.",
+      "keepGoing": "Keep going, you'll get there."
+    },
+    "redo": "Redo the dictation",
+    "drill_one": "Practise this word",
+    "drill_other": "Practise these {{count}} words",
+    "accuracy": "Accuracy (words)",
+    "vsAverage": "{{delta}} pts vs average",
+    "firstDictation": "First dictation",
+    "faults": "Mistakes",
+    "average": "average: {{value}}",
+    "speed": "Speed",
+    "wpm": "{{value}} WPM",
+    "duration": "Duration",
+    "repeats_zero": "no repetitions",
+    "repeats_one": "1 repetition",
+    "repeats_other": "{{count}} repetitions",
+    "text": "Corrected text",
+    "typedLegend": "typed",
+    "expectedLegend": "expected",
+    "showAll": "Show the whole text ({{count}} words)",
+    "showLess": "Show less",
+    "byType": "Mistakes by type",
+    "addedWords": "Words added to your reviews",
+    "reviewTomorrow": "Review scheduled for tomorrow",
+    "columns": {
+      "expected": "Expected",
+      "typed": "Typed",
+      "type": "Type",
+      "action": "Action"
+    },
+    "remove": "Remove",
+    "removeWord": "Remove “{{word}}” from reviews",
+    "removed": "Removed"
+  },
+  "errorType": {
+    "accent": "Accent",
+    "missing_letter": "Missing letter",
+    "extra_letter": "Extra letter",
+    "transposition": "Swapped letters",
+    "substitution": "Wrong letter",
+    "missing_word": "Missing word",
+    "extra_word": "Extra word",
+    "punctuation": "Punctuation",
+    "case": "Capitalisation"
+  },
+  "profiles": {
+    "title": "Dictation",
+    "empty": "No dictation profiles. Set up a dictation, then save its settings under a name (“Slow beginner”, “Exam”…).",
+    "summary": "speed {{rate}}× · {{mode}}",
+    "use": "Use",
+    "delete": "Delete",
+    "deleteNamed": "Delete the “{{name}}” profile",
+    "name": "Save the current settings as",
+    "placeholder": "Slow beginner",
+    "save": "Save"
+  }
+}

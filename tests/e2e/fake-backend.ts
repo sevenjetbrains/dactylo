@@ -48,6 +48,33 @@ export async function installFakeBackend(page: Page) {
       }
     >();
 
+    /** Dictée en cours : son identifiant et son texte. */
+    let dictation: { id: string; text: Text } | null = null;
+    /** Numéro de la dernière lecture simulée. */
+    let utterances = 0;
+    /** Compteur d'identifiants de dictée. */
+    let nextId = 0;
+    /** Rappels inscrits par `transformCallback`, par numéro. */
+    const callbacks = new Map<number, (e: unknown) => void>();
+    /** Numéro du dernier rappel inscrit. */
+    let nextCallback = 0;
+    /** Gestionnaires d'événements inscrits par `plugin:event|listen`. */
+    const listeners: { event: string; handler: number }[] = [];
+    /** Réglages de dictée par défaut. */
+    const dictationSettings: Record<string, unknown> = {
+      voice: null,
+      rate: 1,
+      pitch: 1,
+      volume: 1,
+      segmentation: 'group',
+      groupSize: 4,
+      pauseMs: 1000,
+      readPunctuation: false,
+      advance: 'adaptive',
+      maxRepeats: null,
+      lenientPunctuation: true,
+    };
+
     /** Abandonne une session en cours : supprimée sans frappe, gardée sinon (ADR 0014). */
     const abandon = (id: string) => {
       const s = sessions.get(id);
@@ -315,7 +342,103 @@ export async function installFakeBackend(page: Page) {
         return null;
       },
       next_text_id: () => null,
+
+      // Dictée : segments de 4 mots, lecture « instantanée », correction mot à mot naïve.
+      pending_dictation: () => null,
+      list_voices: () => [{ id: 'fake-fr', name: 'Voix simulée', language: 'fr-FR' }],
+      list_dictation_profiles: () => [],
+      get_dictation_settings: () => dictationSettings,
+      save_dictation_settings: (a) => Object.assign(dictationSettings, a.settings),
+      update_dictation_settings: (a) => Object.assign(dictationSettings, a.settings),
+      start_dictation: (a) => {
+        const t = texts.find((x) => x.id === a.textId) ?? texts[0];
+        if (!t) throw { code: 'notFound', message: 'aucun texte' };
+        const words = t.content.split(/\s+/).filter(Boolean);
+        const segmentWords: number[] = [];
+        for (let i = 0; i < words.length; i += 4) segmentWords.push(Math.min(4, words.length - i));
+        dictation = { id: `d${++nextId}`, text: t };
+        return {
+          sessionId: dictation.id,
+          textId: t.id,
+          title: t.title,
+          exercise: { index: 0, count: 1 },
+          segmentWords,
+          totalWords: words.length,
+          settings: dictationSettings,
+          typed: '',
+          activeMs: 0,
+          repeats: segmentWords.map(() => 0),
+        };
+      },
+      speak_dictation_segment: (a) => {
+        const utterance = ++utterances;
+        // La « lecture » se termine peu après, comme le moteur vocal.
+        setTimeout(() => emit('speech-finished', { utterance }), 50);
+        return { utterance, index: a.index, repeats: a.repeat ? 1 : 0 };
+      },
+      stop_speech: () => null,
+      save_dictation_draft: () => null,
+      abandon_dictation: () => null,
+      finish_dictation: (a) => {
+        const expected = (dictation?.text.content ?? '').split(/\s+/).filter(Boolean);
+        const typed = String(a.typed).split(/\s+/).filter(Boolean);
+        const tokens = expected.map((w, i) => ({
+          expected: w,
+          typed: typed[i] ?? null,
+          word: true,
+          error: typed[i] === w ? null : typed[i] ? 'substitution' : 'missing_word',
+          position: i,
+          spaceBefore: i > 0,
+        }));
+        const faults = tokens.filter((t) => t.error).length;
+        return {
+          sessionId: dictation?.id,
+          textId: dictation?.text.id,
+          title: dictation?.text.title,
+          exercise: { index: 0, count: 1 },
+          nextExercise: null,
+          correction: {
+            tokens,
+            expectedWords: expected.length,
+            correctWords: expected.length - faults,
+            faults,
+            byType: [
+              {
+                errorType: 'substitution',
+                count: tokens.filter((t) => t.error === 'substitution').length,
+              },
+              {
+                errorType: 'missing_word',
+                count: tokens.filter((t) => t.error === 'missing_word').length,
+              },
+            ],
+          },
+          stats: {
+            durationMs: Number(a.activeMs),
+            wpm: 30,
+            accuracy: (100 * (expected.length - faults)) / Math.max(1, expected.length),
+            faults,
+            repeats: 0,
+          },
+          average: null,
+        };
+      },
+      words_exercise: (a) => (a.words as string[]).join(' '),
+
+      // Écoute des événements Tauri : le gestionnaire est rappelé par `emit`.
+      'plugin:event|listen': (a) => {
+        listeners.push({ event: a.event as string, handler: a.handler as number });
+        return listeners.length;
+      },
+      'plugin:event|unlisten': () => null,
     };
+
+    /** Diffuse un événement Tauri simulé aux gestionnaires inscrits. */
+    function emit(event: string, payload: unknown) {
+      for (const l of listeners) {
+        if (l.event === event) callbacks.get(l.handler)?.({ event, id: 0, payload });
+      }
+    }
 
     // Remplace le pont IPC que Tauri injecte normalement dans la WebView.
     Object.assign(window, {
@@ -325,7 +448,11 @@ export async function installFakeBackend(page: Page) {
           if (!handler) throw { code: 'notFound', message: `commande simulée absente : ${cmd}` };
           return handler(args);
         },
-        transformCallback: () => 0,
+        // Les rappels (gestionnaires d'événements) sont gardés sous un numéro.
+        transformCallback: (cb: (e: unknown) => void) => {
+          callbacks.set(++nextCallback, cb);
+          return nextCallback;
+        },
         // Pour les tests : frappes reçues par toutes les sessions, terminées ou non.
         sent: () => [...sessions.values()].reduce((n, s) => n + s.keys.length, 0),
       },

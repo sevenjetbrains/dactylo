@@ -1,0 +1,143 @@
+{
+  "menu": "Dictée",
+  "eyebrow_one": "Dictée · 1 mot",
+  "eyebrow_other": "Dictée · {{count}} mots",
+  "exercise": "exercice {{current}} sur {{count}}",
+  "empty": {
+    "title": "Aucun texte à dicter",
+    "body": "Ajoutez un texte dans la bibliothèque, ou utilisez un texte du pack intégré.",
+    "action": "Ouvrir la bibliothèque"
+  },
+  "resume": {
+    "title": "Dictée interrompue",
+    "body": "Votre dictée de « {{title}} » s'est arrêtée à {{typed}} mots sur {{total}}. Voulez-vous la reprendre ?",
+    "continue": "Reprendre",
+    "discard": "Recommencer à zéro"
+  },
+  "speechError": "Lecture impossible : {{message}}",
+  "copy": {
+    "title": "Votre copie",
+    "hidden": "Texte masqué jusqu'à la correction",
+    "typed_one": "1 mot tapé",
+    "typed_other": "{{count}} mots tapés",
+    "adaptiveHint_zero": "le segment suivant est lu dès que vous avez tout tapé",
+    "adaptiveHint_one": "le segment suivant est lu dès que vous avez tapé 1 mot de plus",
+    "adaptiveHint_other": "le segment suivant est lu dès que vous avez tapé {{count}} mots de plus",
+    "automaticHint": "le segment suivant est lu {{seconds}} s après le précédent",
+    "finish": "Terminer et corriger"
+  },
+  "shortcuts": "Raccourcis : Échap pause ou reprise · Ctrl Espace répéter · Ctrl ← segment précédent.",
+  "banner": {
+    "label": "Lecture de la dictée",
+    "start": "Commencer la dictée",
+    "continue": "Continuer la dictée",
+    "pause": "Mettre en pause",
+    "resume": "Reprendre la lecture",
+    "segment": "Segment {{current}} sur {{total}}",
+    "status": {
+      "ready": "prêt",
+      "speaking": "lecture en cours",
+      "listening": "à vous de taper",
+      "paused": "en pause",
+      "ended": "tous les segments ont été lus",
+      "finishing": "correction…"
+    },
+    "repeatsUnlimited": "Répétitions : {{used}} / illimitées",
+    "repeatsLimited": "Répétitions : {{used}} / {{max}}",
+    "previous": "Segment précédent",
+    "repeat": "Répéter",
+    "repeatKey": "Ctrl Espace"
+  },
+  "sidebar": {
+    "title": "Réglages",
+    "profile": "Profil de dictée",
+    "customProfile": "Personnalisé",
+    "voice": "Voix",
+    "defaultVoice": "Voix française du système",
+    "rate": "Vitesse",
+    "rateValue": "{{value}}×",
+    "pause": "Pause entre segments",
+    "pauseValue": "{{value}} s",
+    "segmentation": "Découpage",
+    "group_one": "Groupe de {{count}}",
+    "group_other": "Groupe de {{count}}",
+    "modes": {
+      "word": "Mot",
+      "group": "Groupe",
+      "sentence": "Phrase",
+      "paragraph": "Paragraphe"
+    },
+    "segmentationLocked": "Le découpage se change avant la première lecture, ou pour la prochaine dictée.",
+    "advance": "Avancement",
+    "advances": {
+      "adaptive": "Adaptatif (selon ma frappe)",
+      "automatic": "Automatique (temps fixe)"
+    },
+    "readPunctuation": "Lire la ponctuation",
+    "readPunctuationHint": "« virgule », « point », « à la ligne »"
+  },
+  "correction": {
+    "eyebrow": "Dictée terminée",
+    "title_zero": "Aucune faute sur {{words}} mots.",
+    "title_one": "1 faute sur {{words}} mots.",
+    "title_other": "{{count}} fautes sur {{words}} mots.",
+    "praise": {
+      "excellent": "Excellent !",
+      "good": "Beau travail.",
+      "keepGoing": "Continuez, ça viendra."
+    },
+    "redo": "Refaire la dictée",
+    "drill_one": "S'entraîner sur ce mot",
+    "drill_other": "S'entraîner sur ces {{count}} mots",
+    "accuracy": "Précision (mots)",
+    "vsAverage": "{{delta}} pts vs moyenne",
+    "firstDictation": "Première dictée",
+    "faults": "Fautes",
+    "average": "moyenne : {{value}}",
+    "speed": "Vitesse",
+    "wpm": "{{value}} MPM",
+    "duration": "Durée",
+    "repeats_zero": "aucune répétition",
+    "repeats_one": "1 répétition",
+    "repeats_other": "{{count}} répétitions",
+    "text": "Texte corrigé",
+    "typedLegend": "tapé",
+    "expectedLegend": "attendu",
+    "showAll": "Afficher tout le texte ({{count}} mots)",
+    "showLess": "Réduire le texte",
+    "byType": "Fautes par type",
+    "addedWords": "Mots ajoutés à vos révisions",
+    "reviewTomorrow": "Révision prévue demain",
+    "columns": {
+      "expected": "Attendu",
+      "typed": "Tapé",
+      "type": "Type",
+      "action": "Action"
+    },
+    "remove": "Retirer",
+    "removeWord": "Retirer « {{word}} » des révisions",
+    "removed": "Retiré"
+  },
+  "errorType": {
+    "accent": "Accent",
+    "missing_letter": "Lettre manquante",
+    "extra_letter": "Lettre en trop",
+    "transposition": "Inversion",
+    "substitution": "Lettre erronée",
+    "missing_word": "Mot oublié",
+    "extra_word": "Mot en trop",
+    "punctuation": "Ponctuation",
+    "case": "Majuscule"
+  },
+  "profiles": {
+    "title": "Dictée",
+    "empty": "Aucun profil de dictée. Réglez une dictée, puis enregistrez ses réglages sous un nom (« Débutant lent », « Examen »…).",
+    "summary": "vitesse {{rate}}× · {{mode}}",
+    "use": "Utiliser",
+    "delete": "Supprimer",
+    "deleteNamed": "Supprimer le profil « {{name}} »",
+    "name": "Enregistrer les réglages actuels sous le nom",
+    "placeholder": "Débutant lent",
+    "save": "Enregistrer"
+  }
+}

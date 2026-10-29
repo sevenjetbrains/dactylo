@@ -46,6 +46,7 @@ describe('registre de modules', () => {
     expect(menu.map((e) => e.moduleId)).toEqual([
       'home',
       'practice',
+      'dictation',
       'library',
       'review',
       'stats',
