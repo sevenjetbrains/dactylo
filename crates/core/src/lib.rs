@@ -5,6 +5,8 @@
 
 /// Jours locaux à partir d'horodatages en ms (séries, révisions du jour).
 pub mod days;
+/// Mode Dictée : correction, découpage, ponctuation lue, réglages.
+pub mod dictation;
 /// Événements de domaine et bus de diffusion entre modules.
 pub mod events;
 /// Découpage des textes longs en exercices et progression.

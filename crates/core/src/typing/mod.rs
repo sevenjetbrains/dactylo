@@ -10,6 +10,7 @@ mod errors;
 /// Tentatives de mots : forme tapée, justesse et durée (F-40).
 mod words;
 
+pub(crate) use errors::base_letters;
 pub use errors::{ErrorType, TypingError, classify};
 pub use words::{DEFAULT_SLOW_FACTOR, SessionWords, WordAttempt};
 

@@ -82,7 +82,7 @@ pub fn classify(expected: &str, typed: &str) -> ErrorType {
 }
 
 /// Lettres sans diacritiques, en minuscules : « Ê » → « e ».
-fn base_letters(s: &str) -> String {
+pub(crate) fn base_letters(s: &str) -> String {
     // La décomposition NFD sépare la lettre de ses accents, qu'on retire.
     s.nfd()
         .filter(|c| !is_combining_mark(*c))
