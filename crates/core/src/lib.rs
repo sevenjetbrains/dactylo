@@ -3,6 +3,8 @@
 //! Ce crate ne dépend pas de Tauri : toutes les règles (comparaison de frappe,
 //! statistiques, répétition espacée, traitement du texte) sont testables seules.
 
+/// Jours locaux à partir d'horodatages en ms (séries, révisions du jour).
+pub mod days;
 /// Événements de domaine et bus de diffusion entre modules.
 pub mod events;
 /// Découpage des textes longs en exercices et progression.
@@ -13,7 +15,7 @@ pub mod library;
 pub mod settings;
 /// Sources de texte (collage, PDF, pack intégré) derrière le trait `TextSource`.
 pub mod source;
-/// Répétition espacée des mots difficiles (Phase 3).
+/// Répétition espacée et suivi des mots difficiles.
 pub mod srs;
 /// Calcul des statistiques de session (MPM, CPM, précision).
 pub mod stats;

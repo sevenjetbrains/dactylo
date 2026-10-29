@@ -7,8 +7,11 @@
 
 /// Classification des fautes (accent, casse, ponctuation…).
 mod errors;
+/// Tentatives de mots : forme tapée, justesse et durée (F-40).
+mod words;
 
 pub use errors::{ErrorType, TypingError, classify};
+pub use words::{DEFAULT_SLOW_FACTOR, SessionWords, WordAttempt};
 
 use serde::{Deserialize, Serialize};
 use unicode_normalization::UnicodeNormalization;
@@ -174,6 +177,8 @@ pub struct TypingSession {
     cells: Vec<Cell>,
     /// Premier graphème erroné tapé à chaque position.
     first_wrong: Vec<Option<String>>,
+    /// Temps actif de la dernière insertion à chaque position, en ms.
+    insert_t: Vec<Option<u32>>,
     /// Indice du prochain graphème à taper.
     position: usize,
     /// Nombre d'insertions acceptées.
@@ -196,6 +201,7 @@ impl TypingSession {
             rules,
             cells: vec![Cell::Pending; len],
             first_wrong: vec![None; len],
+            insert_t: vec![None; len],
             position: 0,
             inserts: 0,
             correct_inserts: 0,
@@ -232,6 +238,10 @@ impl TypingSession {
         // La frappe est acceptée : on retient son numéro et son temps.
         self.last_seq = Some(k.seq);
         self.last_t_ms = self.last_t_ms.max(k.t_ms);
+        // Une insertion date sa position : la durée des mots en découle.
+        if k.kind == KeyKind::Insert {
+            self.insert_t[resolved.position as usize] = Some(k.t_ms);
+        }
         Some(ResolvedKeystroke {
             seq: k.seq,
             t_ms: k.t_ms,
@@ -357,22 +367,14 @@ impl TypingSession {
         for span in &self.words {
             let (start, end) = (span.start as usize, span.end as usize);
             in_word[start..end].fill(true);
-            let wrong: Vec<usize> = (start..end)
-                .filter(|&i| self.first_wrong[i].is_some())
-                .collect();
-            if wrong.is_empty() {
+            // Un mot juste au premier passage n'est pas une faute.
+            let Some(error_type) = self.word_error_type(span) else {
                 continue;
-            }
-            // Le type retenu est le plus fréquent parmi les caractères fautifs.
-            let types: Vec<ErrorType> = wrong.iter().map(|&i| self.classify_at(i)).collect();
-            // Forme tapée : la première faute à chaque position fautive, le texte ailleurs.
-            let typed: String = (start..end)
-                .map(|i| self.first_wrong[i].as_deref().unwrap_or(&self.text[i]))
-                .collect();
+            };
             errors.push(TypingError {
                 expected: self.text[start..end].concat(),
-                typed,
-                error_type: dominant(&types),
+                typed: self.first_typed(span),
+                error_type,
                 position: span.start,
                 word: true,
             });
@@ -392,6 +394,23 @@ impl TypingSession {
         // Les deux passes sont fusionnées dans l'ordre du texte.
         errors.sort_by_key(|e| e.position);
         errors
+    }
+
+    /// Type de faute dominant d'un mot, ou `None` s'il a été juste au premier passage.
+    fn word_error_type(&self, span: &WordSpan) -> Option<ErrorType> {
+        // Le type retenu est le plus fréquent parmi les caractères fautifs.
+        let types: Vec<ErrorType> = (span.start as usize..span.end as usize)
+            .filter(|&i| self.first_wrong[i].is_some())
+            .map(|i| self.classify_at(i))
+            .collect();
+        dominant_error(&types)
+    }
+
+    /// Forme tapée d'un mot : la première faute à chaque position fautive, le texte ailleurs.
+    fn first_typed(&self, span: &WordSpan) -> String {
+        (span.start as usize..span.end as usize)
+            .map(|i| self.first_wrong[i].as_deref().unwrap_or(&self.text[i]))
+            .collect()
     }
 
     /// Classe la première faute faite à la position `i`.
@@ -417,6 +436,11 @@ fn resolved(
         t_ms: 0,
         correct,
     }
+}
+
+/// Type de faute dominant d'une liste (F-41) ; `None` si elle est vide.
+pub fn dominant_error(types: &[ErrorType]) -> Option<ErrorType> {
+    (!types.is_empty()).then(|| dominant(types))
 }
 
 /// Type le plus fréquent ; à égalité, le premier rencontré.

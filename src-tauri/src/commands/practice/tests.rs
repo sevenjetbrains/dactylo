@@ -96,10 +96,23 @@ async fn complete_session_is_saved_with_stats_errors_and_events() {
 
     // Fin de session et mot fautif ont été publiés.
     let events = recorder.events();
-    assert!(events.contains(&DomainEvent::SessionCompleted {
-        session_id: start.session_id.clone(),
-        profile_id: state.profile_id.clone(),
-    }));
+    let completed = events.iter().find_map(|e| match e {
+        DomainEvent::SessionCompleted {
+            session_id,
+            profile_id,
+            words,
+        } if *session_id == start.session_id => Some((profile_id, words)),
+        _ => None,
+    });
+    let (profile_id, words) = completed.expect("SessionCompleted publié");
+    assert_eq!(*profile_id, state.profile_id);
+    // Les deux mots, « la » juste et « forêt » faux, accompagnent la fin de session.
+    let typed: Vec<(&str, bool)> = words
+        .attempts
+        .iter()
+        .map(|a| (a.word.as_str(), a.correct))
+        .collect();
+    assert_eq!(typed, [("la", true), ("forêt", false)]);
     assert!(events.contains(&DomainEvent::WordMistyped {
         session_id: start.session_id.clone(),
         profile_id: state.profile_id.clone(),

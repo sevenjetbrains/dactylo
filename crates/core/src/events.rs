@@ -7,6 +7,8 @@ use std::sync::{Arc, RwLock};
 
 use serde::{Deserialize, Serialize};
 
+use crate::typing::SessionWords;
+
 /// Événement métier émis par un module.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
@@ -22,6 +24,8 @@ pub enum DomainEvent {
         session_id: String,
         /// Profil qui a joué la session.
         profile_id: String,
+        /// Mots entièrement tapés, justes ou non, avec leur durée (ADR 0015).
+        words: SessionWords,
     },
     /// Un mot a été mal écrit pendant une session.
     WordMistyped {
@@ -38,6 +42,11 @@ pub enum DomainEvent {
     TextImported {
         /// Identifiant du texte ajouté.
         text_id: String,
+    },
+    /// La liste des mots difficiles d'un profil a changé (révision du jour, badge).
+    WordsUpdated {
+        /// Profil concerné.
+        profile_id: String,
     },
 }
 
@@ -182,6 +191,7 @@ mod tests {
         bus.publish(&DomainEvent::SessionCompleted {
             session_id: "s1".into(),
             profile_id: "p1".into(),
+            words: SessionWords::default(),
         });
 
         // Les deux événements sont arrivés : l'original puis le republié.

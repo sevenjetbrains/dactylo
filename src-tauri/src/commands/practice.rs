@@ -317,9 +317,11 @@ pub async fn finish(
         sessions::recent_stats(&state.pool, &live.profile_id, session_id, AVERAGE_OVER).await?;
 
     // Événements publiés après l'écriture : les abonnés lisent une base à jour.
+    // Les mots tapés, justes ou non, nourrissent le suivi des mots difficiles (ADR 0015).
     state.bus.publish(&DomainEvent::SessionCompleted {
         session_id: session_id.to_owned(),
         profile_id: live.profile_id.clone(),
+        words: live.typing.word_attempts(),
     });
     // Seuls les mots fautifs alimentent la révision, pas la ponctuation isolée.
     for e in errors.iter().filter(|e| e.word) {

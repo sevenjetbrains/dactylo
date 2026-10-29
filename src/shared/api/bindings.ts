@@ -53,7 +53,7 @@ export const commands = {
 
 /** Events */
 export const events = {
-	domainEventPayload: makeEvent<DomainEventPayload, DomainEventPayload>("domain-event-payload"),
+	domainEventPayload: makeEvent<DomainEventPayload_Serialize, DomainEventPayload_Deserialize>("domain-event-payload"),
 };
 
 /* Types */
@@ -131,13 +131,27 @@ export type CorrectionMode =
 "free";
 
 /**  Événement métier émis par un module. */
-export type DomainEvent = 
+export type DomainEvent = DomainEvent_Serialize | DomainEvent_Deserialize;
+
+/**  Événement Tauri typé portant un `DomainEvent` ; les modules React s'y abonnent. */
+export type DomainEventPayload = DomainEventPayload_Serialize | DomainEventPayload_Deserialize;
+
+/**  Événement Tauri typé portant un `DomainEvent` ; les modules React s'y abonnent. */
+export type DomainEventPayload_Deserialize = DomainEvent_Deserialize;
+
+/**  Événement Tauri typé portant un `DomainEvent` ; les modules React s'y abonnent. */
+export type DomainEventPayload_Serialize = DomainEvent_Serialize;
+
+/**  Événement métier émis par un module. */
+export type DomainEvent_Deserialize = 
 /**  Une session est terminée et ses statistiques sont calculées. */
 { type: "sessionCompleted"; 
 /**  Identifiant de la session terminée. */
 sessionId: string; 
 /**  Profil qui a joué la session. */
-profileId: string } | 
+profileId: string; 
+/**  Mots entièrement tapés, justes ou non, avec leur durée (ADR 0015). */
+words: SessionWords_Deserialize } | 
 /**  Un mot a été mal écrit pendant une session. */
 { type: "wordMistyped"; 
 /**  Session pendant laquelle la faute a eu lieu. */
@@ -151,10 +165,40 @@ typed: string } |
 /**  Un texte a été ajouté à la bibliothèque. */
 { type: "textImported"; 
 /**  Identifiant du texte ajouté. */
-textId: string };
+textId: string } | 
+/**  La liste des mots difficiles d'un profil a changé (révision du jour, badge). */
+{ type: "wordsUpdated"; 
+/**  Profil concerné. */
+profileId: string };
 
-/**  Événement Tauri typé portant un `DomainEvent` ; les modules React s'y abonnent. */
-export type DomainEventPayload = DomainEvent;
+/**  Événement métier émis par un module. */
+export type DomainEvent_Serialize = 
+/**  Une session est terminée et ses statistiques sont calculées. */
+{ type: "sessionCompleted"; 
+/**  Identifiant de la session terminée. */
+sessionId: string; 
+/**  Profil qui a joué la session. */
+profileId: string; 
+/**  Mots entièrement tapés, justes ou non, avec leur durée (ADR 0015). */
+words: SessionWords_Serialize } | 
+/**  Un mot a été mal écrit pendant une session. */
+{ type: "wordMistyped"; 
+/**  Session pendant laquelle la faute a eu lieu. */
+sessionId: string; 
+/**  Profil qui a fait la faute. */
+profileId: string; 
+/**  Mot attendu, tel qu'il figure dans le texte. */
+expected: string; 
+/**  Mot effectivement tapé. */
+typed: string } | 
+/**  Un texte a été ajouté à la bibliothèque. */
+{ type: "textImported"; 
+/**  Identifiant du texte ajouté. */
+textId: string } | 
+/**  La liste des mots difficiles d'un profil a changé (révision du jour, badge). */
+{ type: "wordsUpdated"; 
+/**  Profil concerné. */
+profileId: string };
 
 /**  Code d'erreur stable, sur lequel l'interface peut s'appuyer. */
 export type ErrorCode = 
@@ -586,6 +630,25 @@ export type SessionSummary_Serialize = {
 	average: AverageStats | null,
 };
 
+/**  Mots d'une session et vitesse de référence pour juger leur lenteur. */
+export type SessionWords = SessionWords_Serialize | SessionWords_Deserialize;
+
+/**  Mots d'une session et vitesse de référence pour juger leur lenteur. */
+export type SessionWords_Deserialize = {
+	/**  Mots suivis entièrement tapés, dans l'ordre du texte. */
+	attempts: WordAttempt_Deserialize[],
+	/**  Durée moyenne par caractère de tous les mots tapés (courts compris), en ms. */
+	msPerChar: number | null,
+};
+
+/**  Mots d'une session et vitesse de référence pour juger leur lenteur. */
+export type SessionWords_Serialize = {
+	/**  Mots suivis entièrement tapés, dans l'ordre du texte. */
+	attempts: WordAttempt_Serialize[],
+	/**  Durée moyenne par caractère de tous les mots tapés (courts compris), en ms. */
+	msPerChar: number | null,
+};
+
 /**  Provenance d'un texte ; valeurs identiques à la contrainte `texts.source`. */
 export type SourceKind = 
 /**  Copier-coller (F-20). */
@@ -804,6 +867,49 @@ export type TypingError = {
 	position: number,
 	/**  `true` pour un mot, `false` pour une espace ou une ponctuation isolée. */
 	word: boolean,
+};
+
+/**  Un mot tapé pendant une session. */
+export type WordAttempt = WordAttempt_Serialize | WordAttempt_Deserialize;
+
+/**  Un mot tapé pendant une session. */
+export type WordAttempt_Deserialize = {
+	/**  Clé du mot : minuscules, NFC (« Le » et « le » sont le même mot). */
+	word: string,
+	/**  Mot tel qu'il figure dans le texte. */
+	expected: string,
+	/**  Forme tapée au premier passage. */
+	typed: string,
+	/**  Juste du premier coup ? */
+	correct: boolean,
+	/**  Type de faute dominant, si le mot est faux. */
+	errorType?: ErrorType | null,
+	/**  Index du premier graphème du mot dans le texte. */
+	position: number,
+	/**  Temps passé sur le mot, en ms, depuis la frappe qui le précède. */
+	durationMs: number,
+	/**  Caractères couverts par cette durée (le premier mot du texte en a un de moins). */
+	timedChars: number,
+};
+
+/**  Un mot tapé pendant une session. */
+export type WordAttempt_Serialize = {
+	/**  Clé du mot : minuscules, NFC (« Le » et « le » sont le même mot). */
+	word: string,
+	/**  Mot tel qu'il figure dans le texte. */
+	expected: string,
+	/**  Forme tapée au premier passage. */
+	typed: string,
+	/**  Juste du premier coup ? */
+	correct: boolean,
+	/**  Type de faute dominant, si le mot est faux. */
+	errorType: ErrorType | null,
+	/**  Index du premier graphème du mot dans le texte. */
+	position: number,
+	/**  Temps passé sur le mot, en ms, depuis la frappe qui le précède. */
+	durationMs: number,
+	/**  Caractères couverts par cette durée (le premier mot du texte en a un de moins). */
+	timedChars: number,
 };
 
 /**  Bornes d'un mot dans le texte : `[start, end[` en indices de graphèmes. */
