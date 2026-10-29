@@ -11,6 +11,8 @@ pub mod dictation;
 pub mod events;
 /// Découpage des textes longs en exercices et progression.
 pub mod exercise;
+/// Dispositions de clavier et touches par caractère (clavier virtuel).
+pub mod keyboard;
 /// Recherche, filtre et tri de la bibliothèque.
 pub mod library;
 /// Réglages du mode Copie, avec valeurs par défaut et bornes.

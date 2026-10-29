@@ -1028,6 +1028,10 @@ export type PracticeSettings_Deserialize = {
 	lenientPunctuation?: boolean,
 	/**  Type de session (F-06). */
 	goal?: SessionGoal,
+	/**  Clavier virtuel sous la zone de frappe (F-08). */
+	showKeyboard?: boolean,
+	/**  Son à chaque frappe, différent sur une erreur (F-51). */
+	typingSounds?: boolean,
 };
 
 /**  Réglages d'entraînement d'un profil. */
@@ -1048,6 +1052,10 @@ export type PracticeSettings_Serialize = {
 	lenientPunctuation: boolean,
 	/**  Type de session (F-06). */
 	goal: SessionGoal,
+	/**  Clavier virtuel sous la zone de frappe (F-08). */
+	showKeyboard: boolean,
+	/**  Son à chaque frappe, différent sur une erreur (F-51). */
+	typingSounds: boolean,
 };
 
 /**  Profil utilisateur. */

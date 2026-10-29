@@ -124,6 +124,10 @@ pub struct PracticeSettings {
     pub lenient_punctuation: bool,
     /// Type de session (F-06).
     pub goal: SessionGoal,
+    /// Clavier virtuel sous la zone de frappe (F-08).
+    pub show_keyboard: bool,
+    /// Son à chaque frappe, différent sur une erreur (F-51).
+    pub typing_sounds: bool,
 }
 
 impl Default for PracticeSettings {
@@ -138,6 +142,8 @@ impl Default for PracticeSettings {
             show_banner: true,
             lenient_punctuation: true,
             goal: SessionGoal::WholeText,
+            show_keyboard: true,
+            typing_sounds: false,
         }
     }
 }
@@ -188,6 +194,8 @@ mod tests {
     #[test]
     fn defaults_follow_the_specification() {
         let s = PracticeSettings::default();
+        // Clavier virtuel affiché (maquette), sons coupés.
+        assert!(s.show_keyboard && !s.typing_sounds);
         assert_eq!(s.visible_lines, 3);
         assert_eq!(s.goal, SessionGoal::WholeText);
         assert_eq!(s.rules(), Rules::default());
