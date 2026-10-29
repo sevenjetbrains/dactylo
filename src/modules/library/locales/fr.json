@@ -97,6 +97,8 @@
     "best": "Meilleur : {{wpm}} MPM",
     "practice": "S'entraîner",
     "practiceLabel": "S'entraîner sur « {{title}} »",
+    "dictation": "Dictée",
+    "dictationLabel": "Dictée de « {{title}} »",
     "edit": "Modifier « {{title}} »",
     "duplicate": "Dupliquer « {{title}} »",
     "delete": "Supprimer « {{title}} »",

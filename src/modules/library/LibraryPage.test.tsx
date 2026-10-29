@@ -170,6 +170,11 @@ describe('LibraryPage — liste (F-23)', () => {
     expect(
       await screen.findByRole('link', { name: "S'entraîner sur « Le loup »" }),
     ).toHaveAttribute('href', '/practice?text=t1');
+    // Même texte en dictée (F-10).
+    expect(screen.getByRole('link', { name: 'Dictée de « Le loup »' })).toHaveAttribute(
+      'href',
+      '/dictation?text=t1',
+    );
     expect(screen.getByRole('link', { name: 'Modifier « Le loup »' })).toHaveAttribute(
       'href',
       '/library?view=edit&id=t1',

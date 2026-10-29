@@ -58,5 +58,19 @@
       "dictation": "Dictation",
       "review": "Review"
     }
+  },
+  "dictation": {
+    "eyebrow": "Dictation",
+    "title": "Listen and type",
+    "body": "Listen to the text and type it without seeing it; the correction sorts every mistake.",
+    "resumeBody": "{{typed}} of {{total}} words typed",
+    "group": "Groups of {{count}} words",
+    "word": "Word by word",
+    "sentence": "By sentence",
+    "paragraph": "By paragraph",
+    "rate": "Speed {{value}}×",
+    "punctuation": "Punctuation read aloud",
+    "start": "Start dictation",
+    "resume": "Resume dictation"
   }
 }

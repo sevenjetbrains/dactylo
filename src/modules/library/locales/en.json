@@ -97,6 +97,8 @@
     "best": "Best: {{wpm}} WPM",
     "practice": "Practice",
     "practiceLabel": "Practice on “{{title}}”",
+    "dictation": "Dictation",
+    "dictationLabel": "Dictation of “{{title}}”",
     "edit": "Edit “{{title}}”",
     "duplicate": "Duplicate “{{title}}”",
     "delete": "Delete “{{title}}”",

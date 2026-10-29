@@ -16,6 +16,9 @@ const reviewOverview = vi.fn();
 const reviewExercise = vi.fn();
 const statsDashboard = vi.fn();
 const recentSessions = vi.fn();
+/** Réponses simulées de la dictée. */
+const pendingDictation = vi.fn();
+const getDictationSettings = vi.fn();
 
 // Client simulé ; `unwrap` reproduit le vrai comportement (rejet en cas d'erreur).
 vi.mock('@/shared/api', () => ({
@@ -26,6 +29,8 @@ vi.mock('@/shared/api', () => ({
     reviewExercise: (...args: unknown[]) => reviewExercise(...args),
     statsDashboard: () => statsDashboard(),
     recentSessions: () => recentSessions(),
+    pendingDictation: () => pendingDictation(),
+    getDictationSettings: () => getDictationSettings(),
   },
   events: { domainEventPayload: { listen: () => new Promise(() => {}) } },
   unwrap: async (p: Promise<{ status: string; data?: unknown; error?: unknown }>) => {
@@ -76,6 +81,11 @@ describe('HomePage', () => {
     reviewExercise.mockResolvedValue({ status: 'ok', data: 'œuvre accueillir' });
     statsDashboard.mockResolvedValue({ status: 'ok', data: dashboard });
     recentSessions.mockResolvedValue({ status: 'ok', data: [] });
+    pendingDictation.mockResolvedValue({ status: 'ok', data: null });
+    getDictationSettings.mockResolvedValue({
+      status: 'ok',
+      data: { segmentation: 'group', groupSize: 4, rate: 0.9, readPunctuation: true },
+    });
   });
 
   it('salue le profil courant et propose de commencer', async () => {
@@ -188,6 +198,32 @@ describe('HomePage', () => {
     ).toBeInTheDocument();
     expect(within(rows[2] as HTMLElement).getByText('Révision')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Tout voir' })).toHaveAttribute('href', '/stats');
+  });
+
+  it('propose la dictée avec les réglages du profil, ou sa reprise (F-10)', async () => {
+    const { unmount } = renderHome();
+    expect(await screen.findByText('Groupes de 4 mots')).toBeInTheDocument();
+    expect(screen.getByText('Vitesse 0,9×')).toBeInTheDocument();
+    expect(screen.getByText('Ponctuation lue')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Lancer la dictée' })).toHaveAttribute(
+      'href',
+      '/dictation',
+    );
+    unmount();
+    pendingDictation.mockResolvedValue({
+      status: 'ok',
+      data: {
+        sessionId: 'd1',
+        textId: 't1',
+        title: 'Les Misérables',
+        typedWords: 21,
+        totalWords: 84,
+      },
+    });
+    renderHome();
+    expect(await screen.findByRole('heading', { name: 'Les Misérables' })).toBeInTheDocument();
+    expect(screen.getByText('21 mots tapés sur 84')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Reprendre la dictée' })).toBeInTheDocument();
   });
 
   it("affiche l'erreur du backend", async () => {

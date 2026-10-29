@@ -21,6 +21,7 @@ import { buttonVariants } from '@/shared/ui/button-variants';
 import { Card, Eyebrow } from '@/shared/ui/card';
 import { ProgressBar } from '@/shared/ui/progress-bar';
 
+import { DictationCard } from './DictationCard';
 import { RecentSessions } from './RecentSessions';
 import { ReviewCard } from './ReviewCard';
 import { StatTiles } from './StatTiles';
@@ -40,8 +41,7 @@ function today(language: string): string {
 
 /**
  * Accueil : salutation, révision du jour (F-43), reprise d'une session interrompue
- * ou accès à la copie, tuiles de statistiques et sessions récentes. La carte
- * Dictée des maquettes arrivera avec la Phase 4.
+ * ou accès à la copie, dictée (F-10), tuiles de statistiques et sessions récentes.
  */
 export default function HomePage() {
   const { t, i18n } = useTranslation('home');
@@ -124,8 +124,8 @@ export default function HomePage() {
         </p>
       )}
 
-      {/* Cartes d'action : révision du jour, puis copie ; la dictée viendra en Phase 4. */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Cartes d'action : révision du jour, copie et dictée, comme sur la maquette. */}
+      <div className="grid gap-6 lg:grid-cols-3">
         <ReviewCard overview={overview} />
         {pending ? (
           // Reprise d'une session interrompue : titre, avancement et bouton Continuer.
@@ -177,6 +177,7 @@ export default function HomePage() {
             </div>
           </Card>
         )}
+        <DictationCard />
       </div>
 
       {/* Tuiles de statistiques et dernières sessions (F-33). */}

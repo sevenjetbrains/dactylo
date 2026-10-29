@@ -305,6 +305,14 @@ function TextItem({
             >
               {t('list.practice')}
             </Link>
+            {/* Dictée du même texte (F-10). */}
+            <Link
+              to={`/dictation?text=${encodeURIComponent(text.id)}`}
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+              aria-label={t('list.dictationLabel', { title: text.title })}
+            >
+              {t('list.dictation')}
+            </Link>
             <Link
               to={`/library?view=edit&id=${encodeURIComponent(text.id)}`}
               className={buttonVariants({ variant: 'ghost', size: 'sm' })}

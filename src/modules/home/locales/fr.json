@@ -58,5 +58,19 @@
       "dictation": "Dictée",
       "review": "Révision"
     }
+  },
+  "dictation": {
+    "eyebrow": "Dictée",
+    "title": "Dictée à l'oreille",
+    "body": "Écoutez le texte et tapez-le sans le voir ; la correction classe chaque faute.",
+    "resumeBody": "{{typed}} mots tapés sur {{total}}",
+    "group": "Groupes de {{count}} mots",
+    "word": "Mot à mot",
+    "sentence": "Par phrase",
+    "paragraph": "Par paragraphe",
+    "rate": "Vitesse {{value}}×",
+    "punctuation": "Ponctuation lue",
+    "start": "Lancer la dictée",
+    "resume": "Reprendre la dictée"
   }
 }
