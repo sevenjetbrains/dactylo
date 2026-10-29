@@ -162,11 +162,15 @@ export function DifficultWords() {
                     </td>
                     <td className="py-3 pr-4">
                       {w.dominantError ? (
-                        <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
+                        <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
                           {t(`errorType.${w.dominantError}`)}
                         </span>
-                      ) : (
+                      ) : w.encounters > 0 ? (
+                        // Suivi sans faute : il est entré par sa lenteur (F-40).
                         <span className="text-muted-foreground">{t('words.slow')}</span>
+                      ) : (
+                        // Ajouté à la main, pas encore tapé.
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </td>
                     <td className="py-3 pr-4 text-right font-mono tabular-nums">

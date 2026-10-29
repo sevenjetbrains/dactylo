@@ -137,7 +137,7 @@ export default function StatsPage() {
       ) : (
         <>
           {/* Courbe de vitesse et trois tuiles (F-33). */}
-          <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
             <Card>
               <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
                 <CardTitle className="mb-0">{t('chart.title')}</CardTitle>
@@ -166,7 +166,7 @@ export default function StatsPage() {
           </div>
 
           {/* Carte de chaleur et bigrammes (F-34). */}
-          <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
             <Card>
               <CardTitle>{t('keys.title')}</CardTitle>
               <KeyHeatmap report={data.keys} />

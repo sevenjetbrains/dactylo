@@ -11,14 +11,26 @@ import { formatNumber } from '@/shared/lib/format';
 const WIDTH = 640;
 const HEIGHT = 260;
 /** Marges : à gauche pour les graduations, en bas pour les dates. */
-const PAD = { left: 40, right: 16, top: 16, bottom: 32 };
+const PAD = { left: 48, right: 16, top: 24, bottom: 36 };
 
-/** Graduations de l'axe vertical : bornes arrondies à la dizaine, pas de 10 ou 20. */
+/** Pas de graduation possibles, du plus fin au plus large. */
+const STEPS = [5, 10, 20, 25, 50, 100];
+/** Nombre d'intervalles visé sur l'axe vertical. */
+const TARGET_INTERVALS = 4;
+/** Taille du texte, en unités du `viewBox` (le SVG est réduit à l'affichage). */
+const FONT = 16;
+
+/** Graduations de l'axe vertical : pas « rond » donnant environ 4 intervalles. */
 function scale(values: number[]): { lo: number; hi: number; ticks: number[] } {
-  const lo = Math.max(0, Math.floor((Math.min(...values) - 5) / 10) * 10);
-  const hi = Math.ceil((Math.max(...values) + 5) / 10) * 10;
-  // Au-delà de 4 intervalles de 10, on passe à 20 pour rester lisible.
-  const step = hi - lo > 40 ? 20 : 10;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  // Le plus petit pas qui ne dépasse pas le nombre d'intervalles visé.
+  const step =
+    STEPS.find((s) => (max - min + s) / s <= TARGET_INTERVALS + 1) ??
+    STEPS[STEPS.length - 1] ??
+    100;
+  const lo = Math.max(0, Math.floor((min - step / 2) / step) * step);
+  const hi = Math.ceil((max + step / 2) / step) * step;
   const ticks: number[] = [];
   for (let v = lo; v <= hi; v += step) ticks.push(v);
   return { lo, hi, ticks };
@@ -82,7 +94,7 @@ export function SpeedChart({ points, best }: Props) {
             stroke="currentColor"
             strokeOpacity={0.15}
           />
-          <text x={PAD.left - 8} y={y(v) + 4} textAnchor="end" fontSize={12} fill="currentColor">
+          <text x={PAD.left - 8} y={y(v) + 5} textAnchor="end" fontSize={FONT} fill="currentColor">
             {v}
           </text>
         </g>
@@ -99,7 +111,7 @@ export function SpeedChart({ points, best }: Props) {
             strokeWidth={2}
             strokeDasharray="6 5"
           />
-          <text x={PAD.left + 6} y={y(best) - 6} fontSize={12} fill="currentColor">
+          <text x={PAD.left + 6} y={y(best) - 6} fontSize={FONT} fill="currentColor">
             {t('chart.record', { value: formatNumber(best, lang) })}
           </text>
         </g>
@@ -118,7 +130,7 @@ export function SpeedChart({ points, best }: Props) {
       </g>
       {/* Dates de la première et de la dernière session. */}
       {first && (
-        <text x={PAD.left} y={HEIGHT - 8} fontSize={12} fill="currentColor">
+        <text x={PAD.left} y={HEIGHT - 8} fontSize={FONT} fill="currentColor">
           {shortDate(first.startedAt, lang)}
         </text>
       )}
@@ -126,7 +138,7 @@ export function SpeedChart({ points, best }: Props) {
         <text
           x={WIDTH - PAD.right}
           y={HEIGHT - 8}
-          fontSize={12}
+          fontSize={FONT}
           textAnchor="end"
           fill="currentColor"
         >

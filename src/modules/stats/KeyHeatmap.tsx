@@ -56,7 +56,7 @@ export function KeyHeatmap({ report }: { report: KeyReport }) {
         ))}
         <li>{t('keys.high')}</li>
       </ul>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 overflow-x-auto pb-1">
         {ROWS.map((row, r) => (
           <div key={row.join('')} className={cn('flex gap-2', OFFSETS[r])}>
             {row.map((key) => {
