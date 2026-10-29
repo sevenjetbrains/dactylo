@@ -10,6 +10,9 @@ import { cn } from '@/shared/lib/utils';
 import { buildMenu, type MenuEntry } from './menu';
 import type { ModuleManifest } from './types';
 
+/** Nom affiché de chaque disposition clavier (BÉPO prend son accent). */
+const LAYOUT_NAMES: Record<string, string> = { azerty: 'AZERTY', qwerty: 'QWERTY', bepo: 'BÉPO' };
+
 /** Pastille d'une entrée de menu : le hook du module donne le nombre affiché. */
 function MenuBadge({ useBadge }: { useBadge: NonNullable<MenuEntry['useBadge']> }) {
   const count = useBadge();
@@ -171,7 +174,8 @@ export function Shell({ modules }: { modules: readonly ModuleManifest[] }) {
               <p className="truncate text-sm font-semibold">{profile.name}</p>
               <p className="truncate text-xs text-sidebar-muted">
                 {t('common:profile.details', {
-                  layout: profile.keyboardLayout.toUpperCase(),
+                  layout:
+                    LAYOUT_NAMES[profile.keyboardLayout] ?? profile.keyboardLayout.toUpperCase(),
                   language: t('common:languageName'),
                 })}
               </p>

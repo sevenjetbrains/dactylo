@@ -28,8 +28,8 @@ const FINGER_COLORS: Record<Finger, string> = {
   rightPinky: 'border-t-red-500 bg-red-500',
 };
 
-/** Largeur d'une touche ordinaire, en rem. */
-const UNIT_REM = 3;
+/** Largeur maximale du clavier : celle de la maquette sur un grand écran. */
+const MAX_WIDTH = '52rem';
 
 /** Légende affichée sur une touche : majuscule pour une lettre, sinon le caractère de base. */
 function label(key: KeyDef): string {
@@ -78,6 +78,10 @@ export function VirtualKeyboard({ text, position }: Props) {
     [layout],
   );
   if (!layout) return null;
+  // Rangée la plus longue, en largeurs de touche : elle occupe toute la largeur.
+  const widest = Math.max(
+    ...layout.rows.map((row) => row.reduce((sum, k) => sum + (k.width ?? 1), 0)),
+  );
   const next = text[position];
   const sequence = next === undefined ? [] : (presses.get(next) ?? []);
   const first = sequence[0];
@@ -96,8 +100,8 @@ export function VirtualKeyboard({ text, position }: Props) {
     <figure className="flex flex-col items-center gap-3">
       <div
         aria-hidden
-        className="flex flex-col gap-1.5 rounded-2xl bg-muted p-3"
-        style={{ width: 'fit-content' }}
+        className="flex w-full flex-col gap-1.5 rounded-2xl bg-muted p-3"
+        style={{ maxWidth: MAX_WIDTH }}
       >
         {layout.rows.map((row, r) => (
           <div key={r} className="flex gap-1.5">
@@ -109,9 +113,10 @@ export function VirtualKeyboard({ text, position }: Props) {
                   FINGER_COLORS[key.finger].split(' ')[0],
                   lit.has(key.code) && 'bg-primary font-bold text-primary-foreground',
                 )}
-                // Largeur proportionnelle, interstices compris (0,375 rem chacun).
+                // Largeur proportionnelle à la rangée la plus longue : le clavier tient
+                // dans la page, quelle que soit sa largeur (interstices de 0,375 rem).
                 style={{
-                  width: `${(key.width ?? 1) * UNIT_REM + ((key.width ?? 1) - 1) * 0.375}rem`,
+                  width: `calc(${((key.width ?? 1) / widest) * 100}% - 0.375rem)`,
                 }}
               >
                 {label(key)}
