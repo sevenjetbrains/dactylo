@@ -1,8 +1,16 @@
 //! Mode Dictée (F-10 à F-17) : correction mot à mot, découpage de la lecture,
 //! ponctuation lue, avancement et réglages.
 
+/// Avancement d'un segment au suivant (F-15).
+pub mod advance;
 /// Alignement mot à mot et classement des fautes (F-16).
 pub mod align;
+/// Texte lu, ponctuation dite en toutes lettres (F-13).
+pub mod punctuation;
+/// Découpage en segments (F-11).
+pub mod segment;
+/// Réglages de la dictée et des profils (F-12 à F-15, F-17).
+pub mod settings;
 
 use crate::typing::{SessionWords, WordAttempt};
 

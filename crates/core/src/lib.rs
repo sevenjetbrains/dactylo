@@ -17,6 +17,8 @@ pub mod library;
 pub mod settings;
 /// Sources de texte (collage, PDF, pack intégré) derrière le trait `TextSource`.
 pub mod source;
+/// Synthèse vocale derrière le trait `SpeechEngine`.
+pub mod speech;
 /// Répétition espacée et suivi des mots difficiles.
 pub mod srs;
 /// Calcul des statistiques de session (MPM, CPM, précision).
