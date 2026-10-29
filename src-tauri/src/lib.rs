@@ -8,6 +8,8 @@ pub mod db;
 pub mod error;
 /// Relais des événements de domaine vers l'interface.
 pub mod events;
+/// Moteurs de synthèse vocale (dictée).
+pub mod speech;
 /// État partagé entre les commandes.
 pub mod state;
 /// Outils communs aux tests.
@@ -18,8 +20,10 @@ use std::sync::Arc;
 
 use dactylo_core::events::EventBus;
 use tauri::Manager;
+use tauri_specta::Event;
 
-use crate::events::FrontendForwarder;
+use crate::events::{FrontendForwarder, SpeechFinished};
+use crate::speech::{TtsEngine, UnavailableEngine};
 use crate::state::AppState;
 
 /// Nom du fichier de base dans le dossier de données de l'application (NF-05).
@@ -55,8 +59,18 @@ pub fn run() {
             // Les modules métier (révision…) s'abonnent à leur tour.
             commands::subscribe_modules(&bus, &pool);
 
+            // Voix du système ; sans synthèse disponible, la dictée l'explique à l'écran.
+            let handle = app.handle().clone();
+            let speech: Arc<dyn dactylo_core::speech::SpeechEngine> =
+                match TtsEngine::start(Arc::new(move |utterance| {
+                    let _ = SpeechFinished { utterance }.emit(&handle);
+                })) {
+                    Ok(engine) => Arc::new(engine),
+                    Err(e) => Arc::new(UnavailableEngine(e.0)),
+                };
+
             // État accessible à toutes les commandes.
-            app.manage(AppState::new(pool, bus, profile.id));
+            app.manage(AppState::new(pool, bus, profile.id).with_speech(speech));
             Ok(())
         })
         .run(tauri::generate_context!())

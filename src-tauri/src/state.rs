@@ -5,9 +5,12 @@ use std::sync::{Arc, Mutex};
 
 use dactylo_core::events::EventBus;
 use dactylo_core::settings::PracticeSettings;
+use dactylo_core::speech::SpeechEngine;
 use dactylo_core::typing::TypingSession;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
+
+use crate::speech::UnavailableEngine;
 
 /// Exercice d'une session : rang, nombre d'exercices du texte et portion tapée (F-24).
 /// Il est enregistré avec les réglages de la session pour pouvoir la reconstruire.
@@ -50,17 +53,25 @@ pub struct AppState {
     pub profile_id: String,
     /// Sessions en cours, par identifiant de session.
     pub live_sessions: Mutex<HashMap<String, LiveSession>>,
+    /// Moteur de synthèse vocale de la dictée (ADR 0019).
+    pub speech: Arc<dyn SpeechEngine>,
 }
 
 impl AppState {
-    /// Crée l'état avec un cache de sessions vide.
+    /// Crée l'état avec un cache de sessions vide, sans moteur vocal (`with_speech`).
     pub fn new(pool: SqlitePool, bus: Arc<EventBus>, profile_id: String) -> Self {
         Self {
             pool,
             bus,
             profile_id,
             live_sessions: Mutex::default(),
+            speech: Arc::new(UnavailableEngine("moteur vocal non démarré".into())),
         }
+    }
+
+    /// Remplace le moteur vocal.
+    pub fn with_speech(self, speech: Arc<dyn SpeechEngine>) -> Self {
+        Self { speech, ..self }
     }
 
     /// Retire une session du cache (le verrou n'est jamais tenu pendant une E/S).

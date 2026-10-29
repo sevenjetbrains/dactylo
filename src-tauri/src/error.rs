@@ -28,6 +28,15 @@ impl From<dactylo_core::source::SourceError> for AppError {
     }
 }
 
+/// Une lecture impossible (aucune voix, moteur absent) est une donnée invalide pour
+/// l'interface, avec son message lisible.
+impl From<dactylo_core::speech::SpeechError> for AppError {
+    /// Reprend le message du moteur.
+    fn from(error: dactylo_core::speech::SpeechError) -> Self {
+        AppError::Invalid(error.to_string())
+    }
+}
+
 impl AppError {
     /// Code stable correspondant à la variante.
     fn code(&self) -> ErrorCode {

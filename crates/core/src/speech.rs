@@ -43,12 +43,14 @@ impl std::fmt::Display for SpeechError {
 impl std::error::Error for SpeechError {}
 
 /// Moteur de synthèse vocale. `speak` lance la lecture et rend la main ; le moteur
-/// signale la fin de lecture à part (événement de l'adaptateur).
+/// signale la fin de lecture à part (événement de l'adaptateur), avec le numéro de
+/// lecture renvoyé par `speak`.
 pub trait SpeechEngine: Send + Sync {
     /// Voix installées.
     fn voices(&self) -> Result<Vec<Voice>, SpeechError>;
-    /// Lit `text` avec `settings`, en interrompant toute lecture en cours.
-    fn speak(&self, text: &str, settings: &VoiceSettings) -> Result<(), SpeechError>;
+    /// Lit `text` avec `settings`, en interrompant toute lecture en cours ; renvoie
+    /// le numéro de cette lecture, croissant.
+    fn speak(&self, text: &str, settings: &VoiceSettings) -> Result<u64, SpeechError>;
     /// Interrompt la lecture en cours.
     fn stop(&self) -> Result<(), SpeechError>;
 }

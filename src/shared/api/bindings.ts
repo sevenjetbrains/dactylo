@@ -81,6 +81,7 @@ export const commands = {
 /** Events */
 export const events = {
 	domainEventPayload: makeEvent<DomainEventPayload_Serialize, DomainEventPayload_Deserialize>("domain-event-payload"),
+	speechFinished: makeEvent<SpeechFinished, SpeechFinished>("speech-finished"),
 };
 
 /* Types */
@@ -1012,6 +1013,16 @@ export type SourceLine = {
 	page: number,
 	/**  Texte de la ligne. */
 	text: string,
+};
+
+/**
+ *  Fin de lecture d'un texte par le moteur vocal (dictée, ADR 0019). `utterance` est
+ *  le numéro renvoyé par la commande de lecture : l'interface ignore les fins
+ *  d'anciennes lectures.
+ */
+export type SpeechFinished = {
+	/**  Numéro de la lecture terminée. */
+	utterance: number,
 };
 
 /**  Série de jours consécutifs d'entraînement. */

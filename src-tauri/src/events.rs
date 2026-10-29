@@ -9,6 +9,16 @@ use tauri_specta::Event;
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type, tauri_specta::Event)]
 pub struct DomainEventPayload(pub DomainEvent);
 
+/// Fin de lecture d'un texte par le moteur vocal (dictée, ADR 0019). `utterance` est
+/// le numéro renvoyé par la commande de lecture : l'interface ignore les fins
+/// d'anciennes lectures.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, specta::Type, tauri_specta::Event)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeechFinished {
+    /// Numéro de la lecture terminée.
+    pub utterance: u64,
+}
+
 /// Abonné du bus qui retransmet chaque événement à la fenêtre.
 pub struct FrontendForwarder<R: Runtime> {
     /// Application Tauri vers laquelle émettre.
