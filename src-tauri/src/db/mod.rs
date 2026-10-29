@@ -1,5 +1,7 @@
 //! Accès SQLite : ouverture, PRAGMA et migrations automatiques (NF-05).
 
+/// Sauvegarde et restauration de la base (F-52).
+pub mod backup;
 /// Pack de textes intégré (F-25).
 pub mod builtin;
 /// Profils de dictée, brouillon et fin des dictées.

@@ -18,6 +18,8 @@ pub mod profiles;
 pub mod review;
 /// Statistiques : tableau de bord, clavier, sessions récentes, export.
 pub mod stats;
+/// Système : sauvegarde et restauration.
+pub mod system;
 
 use std::sync::Arc;
 
@@ -92,6 +94,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             stats::key_report,
             stats::recent_sessions,
             stats::export_sessions_csv,
+            system::backup_database,
+            system::restore_database,
         ])
         .events(collect_events![DomainEventPayload, SpeechFinished])
         // Les i64 sont des horodatages en ms et des compteurs : très en deçà de 2^53.

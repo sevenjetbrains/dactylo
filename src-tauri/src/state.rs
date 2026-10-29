@@ -1,6 +1,7 @@
 //! État partagé de l'application et cache des sessions en cours.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 
 use dactylo_core::dictation::segment::Segment;
@@ -81,6 +82,8 @@ pub struct AppState {
     pub speech: Arc<dyn SpeechEngine>,
     /// Dictées en cours, par identifiant de session.
     pub live_dictations: Mutex<HashMap<String, LiveDictation>>,
+    /// Fichier de la base, pour la restauration (F-52) ; `None` pour une base en mémoire.
+    pub db_path: Option<PathBuf>,
 }
 
 impl AppState {
@@ -92,6 +95,7 @@ impl AppState {
             active_profile: RwLock::new(profile_id),
             live_sessions: Mutex::default(),
             live_dictations: Mutex::default(),
+            db_path: None,
             speech: Arc::new(UnavailableEngine("moteur vocal non démarré".into())),
         }
     }
@@ -111,6 +115,14 @@ impl AppState {
             .active_profile
             .write()
             .unwrap_or_else(|poisoned| poisoned.into_inner()) = profile_id;
+    }
+
+    /// Indique le fichier de la base.
+    pub fn with_db_path(self, db_path: PathBuf) -> Self {
+        Self {
+            db_path: Some(db_path),
+            ..self
+        }
     }
 
     /// Remplace le moteur vocal.

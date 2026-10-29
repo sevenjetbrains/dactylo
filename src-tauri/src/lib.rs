@@ -39,6 +39,8 @@ pub fn run() {
     commands::export_bindings(&builder).expect("export des types TypeScript");
 
     tauri::Builder::default()
+        // Boîte de dialogue du système : seul accès aux fichiers (NF-11, F-52).
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             // Branche les événements typés sur l'application.
@@ -47,7 +49,10 @@ pub fn run() {
             // Base dans le dossier de données de l'utilisateur, migrations appliquées à l'ouverture.
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
-            let pool = tauri::async_runtime::block_on(db::connect(&data_dir.join(DB_FILE)))?;
+            let db_path = data_dir.join(DB_FILE);
+            // Une restauration demandée avant le redémarrage est installée d'abord (F-52).
+            db::backup::apply_pending(&db_path)?;
+            let pool = tauri::async_runtime::block_on(db::connect(&db_path))?;
             // Profil retenu au dernier lancement, sinon le plus ancien (créé si la base est vide).
             let profile = tauri::async_runtime::block_on(db::profiles::active(&pool))?;
             // Pack de textes intégré, inséré une seule fois (F-25).
@@ -70,7 +75,11 @@ pub fn run() {
                 };
 
             // État accessible à toutes les commandes.
-            app.manage(AppState::new(pool, bus, profile.id).with_speech(speech));
+            app.manage(
+                AppState::new(pool, bus, profile.id)
+                    .with_speech(speech)
+                    .with_db_path(db_path),
+            );
             Ok(())
         })
         .run(tauri::generate_context!())

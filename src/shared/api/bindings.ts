@@ -125,6 +125,13 @@ export const commands = {
 	recentSessions: (limit: number) => typedError<RecentSession_Serialize[], ApiError>(__TAURI_INVOKE("recent_sessions", { limit })),
 	/**  Commande : export CSV des sessions de la période (F-35). */
 	exportSessionsCsv: (period: Period, tzOffsetMinutes: number, labels: CsvLabels) => typedError<string, ApiError>(__TAURI_INVOKE("export_sessions_csv", { period, tzOffsetMinutes, labels })),
+	/**  Commande : sauvegarde la base dans `path` (F-52). */
+	backupDatabase: (path: string) => typedError<null, ApiError>(__TAURI_INVOKE("backup_database", { path })),
+	/**
+	 *  Commande : restaure la sauvegarde `path`, puis redémarre l'application, qui
+	 *  l'installe avant d'ouvrir la base (F-52).
+	 */
+	restoreDatabase: (path: string) => typedError<null, ApiError>(__TAURI_INVOKE("restore_database", { path })),
 };
 
 /** Events */
