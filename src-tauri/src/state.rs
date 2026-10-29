@@ -1,7 +1,7 @@
 //! État partagé de l'application et cache des sessions en cours.
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 
 use dactylo_core::dictation::segment::Segment;
 use dactylo_core::dictation::settings::DictationSettings;
@@ -73,8 +73,8 @@ pub struct AppState {
     pub pool: SqlitePool,
     /// Bus des événements de domaine.
     pub bus: Arc<EventBus>,
-    /// Profil actif ; le changement de profil arrive en Phase 5 (F-50).
-    pub profile_id: String,
+    /// Profil actif (F-50) ; lu par `profile_id()`, changé par `set_profile`.
+    active_profile: RwLock<String>,
     /// Sessions en cours, par identifiant de session.
     pub live_sessions: Mutex<HashMap<String, LiveSession>>,
     /// Moteur de synthèse vocale de la dictée (ADR 0019).
@@ -89,11 +89,28 @@ impl AppState {
         Self {
             pool,
             bus,
-            profile_id,
+            active_profile: RwLock::new(profile_id),
             live_sessions: Mutex::default(),
             live_dictations: Mutex::default(),
             speech: Arc::new(UnavailableEngine("moteur vocal non démarré".into())),
         }
+    }
+
+    /// Identifiant du profil actif.
+    pub fn profile_id(&self) -> String {
+        self.active_profile
+            .read()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone()
+    }
+
+    /// Change de profil actif (F-50) ; les sessions en mémoire des autres profils
+    /// restent intactes, chacune garde son profil.
+    pub fn set_profile(&self, profile_id: String) {
+        *self
+            .active_profile
+            .write()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = profile_id;
     }
 
     /// Remplace le moteur vocal.

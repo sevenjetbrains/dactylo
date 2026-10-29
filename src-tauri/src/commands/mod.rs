@@ -12,6 +12,8 @@ pub mod dictation;
 pub mod library;
 /// Mode Copie : réglages et sessions.
 pub mod practice;
+/// Profils et disposition clavier.
+pub mod profiles;
 /// Révision : mots difficiles, révision du jour, exercices générés.
 pub mod review;
 /// Statistiques : tableau de bord, clavier, sessions récentes, export.
@@ -70,6 +72,13 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             practice::resume_session,
             practice::wrap_text,
             practice::next_text_id,
+            profiles::list_profiles,
+            profiles::create_profile,
+            profiles::update_profile,
+            profiles::delete_profile,
+            profiles::switch_profile,
+            profiles::keyboard_layout,
+            profiles::keyboard_keys,
             review::get_review_settings,
             review::save_review_settings,
             review::review_overview,

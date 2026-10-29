@@ -80,7 +80,7 @@ pub async fn store_settings(
 ) -> AppResult<ReviewSettings> {
     let settings = settings.sanitized();
     let value = serde_json::to_value(settings).map_err(|e| AppError::Invalid(e.to_string()))?;
-    profiles::save_settings(&state.pool, &state.profile_id, SETTINGS_KEY, &value).await?;
+    profiles::save_settings(&state.pool, &state.profile_id(), SETTINGS_KEY, &value).await?;
     Ok(settings)
 }
 
@@ -175,8 +175,8 @@ impl EventSubscriber for ReviewSubscriber {
 /// Vue d'ensemble : mots dus avant le prochain minuit local, suivis et maîtrisés.
 pub async fn overview(state: &AppState, tz_offset_min: i32) -> AppResult<ReviewOverview> {
     let before = end_of_day(now_ms(), tz_offset_min);
-    let due = words::due(&state.pool, &state.profile_id, before).await?;
-    let (tracked, mastered) = words::counts(&state.pool, &state.profile_id).await?;
+    let due = words::due(&state.pool, &state.profile_id(), before).await?;
+    let (tracked, mastered) = words::counts(&state.pool, &state.profile_id()).await?;
     Ok(ReviewOverview {
         due,
         tracked,
@@ -186,7 +186,7 @@ pub async fn overview(state: &AppState, tz_offset_min: i32) -> AppResult<ReviewO
 
 /// Mots en révision, du plus urgent au moins urgent, avec leur détail (F-41).
 pub async fn difficult(state: &AppState) -> AppResult<Vec<DifficultWord>> {
-    let tracked = words::tracked(&state.pool, &state.profile_id).await?;
+    let tracked = words::tracked(&state.pool, &state.profile_id()).await?;
     Ok(tracked
         .into_iter()
         .map(|w| DifficultWord {
@@ -220,7 +220,7 @@ fn word_key(input: &str) -> AppResult<String> {
 /// Publie `WordsUpdated` pour le profil actif.
 fn notify(state: &AppState) {
     state.bus.publish(&DomainEvent::WordsUpdated {
-        profile_id: state.profile_id.clone(),
+        profile_id: state.profile_id(),
     });
 }
 
@@ -231,14 +231,14 @@ pub async fn add(state: &AppState, input: &str) -> AppResult<String> {
     let now = now_ms();
     let mut conn = state.pool.acquire().await?;
     // Mot connu : il garde ses compteurs ; sinon, nouveau mot ajouté à la main.
-    let (id, record) = match words::find(&mut conn, &state.profile_id, &key).await? {
+    let (id, record) = match words::find(&mut conn, &state.profile_id(), &key).await? {
         Some((id, mut record)) => {
             record.track_now(now);
             (Some(id), record)
         }
         None => (None, WordRecord::added(key.clone(), now)),
     };
-    words::save(&mut conn, &state.profile_id, id.as_deref(), &record).await?;
+    words::save(&mut conn, &state.profile_id(), id.as_deref(), &record).await?;
     drop(conn);
     notify(state);
     Ok(key)
@@ -246,7 +246,7 @@ pub async fn add(state: &AppState, input: &str) -> AppResult<String> {
 
 /// Retire un mot de la liste (F-45) : il est oublié avec ses tentatives.
 pub async fn remove(state: &AppState, word: &str) -> AppResult<()> {
-    words::delete(&state.pool, &state.profile_id, &word_key(word)?).await?;
+    words::delete(&state.pool, &state.profile_id(), &word_key(word)?).await?;
     notify(state);
     Ok(())
 }
@@ -255,11 +255,11 @@ pub async fn remove(state: &AppState, word: &str) -> AppResult<()> {
 pub async fn mark_mastered(state: &AppState, word: &str) -> AppResult<()> {
     let key = word_key(word)?;
     let mut conn = state.pool.acquire().await?;
-    let (id, mut record) = words::find(&mut conn, &state.profile_id, &key)
+    let (id, mut record) = words::find(&mut conn, &state.profile_id(), &key)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("mot « {key} »")))?;
     record.mark_mastered();
-    words::save(&mut conn, &state.profile_id, Some(&id), &record).await?;
+    words::save(&mut conn, &state.profile_id(), Some(&id), &record).await?;
     drop(conn);
     notify(state);
     Ok(())
@@ -276,7 +276,7 @@ pub async fn exercise(
     // Les mots dus d'abord ; sinon les prochains à réviser, pour s'avancer.
     let mut list = overview(state, tz_offset_min).await?.due;
     if list.is_empty() {
-        list = words::tracked(&state.pool, &state.profile_id)
+        list = words::tracked(&state.pool, &state.profile_id())
             .await?
             .into_iter()
             .map(|w| w.record.word)
@@ -321,7 +321,7 @@ async fn generate(
 #[tauri::command]
 #[specta::specta]
 pub async fn get_review_settings(state: State<'_, AppState>) -> AppResult<ReviewSettings> {
-    load_settings(&state.pool, &state.profile_id).await
+    load_settings(&state.pool, &state.profile_id()).await
 }
 
 /// Commande : enregistre les réglages du module Révision.

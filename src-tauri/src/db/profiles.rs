@@ -61,6 +61,108 @@ pub async fn ensure_default(pool: &SqlitePool) -> AppResult<Profile> {
     Ok(profile)
 }
 
+/// Clé de `app_meta` qui retient le profil actif (F-50, ADR 0023).
+const ACTIVE_KEY: &str = "active_profile";
+
+/// Profils, du plus ancien au plus récent.
+pub async fn list(pool: &SqlitePool) -> AppResult<Vec<Profile>> {
+    Ok(sqlx::query_as(
+        "SELECT id, name, keyboard_layout, created_at FROM profiles ORDER BY created_at, id",
+    )
+    .fetch_all(pool)
+    .await?)
+}
+
+/// Nom d'un profil : non vide, espaces de bord retirées.
+fn clean_name(name: &str) -> AppResult<String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err(AppError::Invalid("le profil doit avoir un nom".into()));
+    }
+    Ok(name.to_owned())
+}
+
+/// Crée un profil ; `layout` est une valeur de `profiles.keyboard_layout`.
+pub async fn create(pool: &SqlitePool, name: &str, layout: &str) -> AppResult<Profile> {
+    let profile = Profile {
+        id: new_id(),
+        name: clean_name(name)?,
+        keyboard_layout: layout.to_owned(),
+        created_at: now_ms(),
+    };
+    sqlx::query("INSERT INTO profiles (id, name, keyboard_layout, created_at) VALUES (?, ?, ?, ?)")
+        .bind(&profile.id)
+        .bind(&profile.name)
+        .bind(&profile.keyboard_layout)
+        .bind(profile.created_at)
+        .execute(pool)
+        .await?;
+    Ok(profile)
+}
+
+/// Change le nom et la disposition d'un profil ; `NotFound` s'il n'existe pas.
+pub async fn update(pool: &SqlitePool, id: &str, name: &str, layout: &str) -> AppResult<Profile> {
+    let updated = sqlx::query("UPDATE profiles SET name = ?, keyboard_layout = ? WHERE id = ?")
+        .bind(clean_name(name)?)
+        .bind(layout)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    if updated.rows_affected() == 0 {
+        return Err(AppError::NotFound(format!("profil {id}")));
+    }
+    get(pool, id).await
+}
+
+/// Supprime un profil et toutes ses données (sessions, mots, réglages) en cascade.
+/// Le dernier profil ne peut pas être supprimé.
+pub async fn delete(pool: &SqlitePool, id: &str) -> AppResult<()> {
+    let mut tx = pool.begin().await?;
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM profiles")
+        .fetch_one(&mut *tx)
+        .await?;
+    if count <= 1 {
+        return Err(AppError::Invalid(
+            "le dernier profil ne peut pas être supprimé".into(),
+        ));
+    }
+    let deleted = sqlx::query("DELETE FROM profiles WHERE id = ?")
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
+    if deleted.rows_affected() == 0 {
+        return Err(AppError::NotFound(format!("profil {id}")));
+    }
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Retient le profil actif pour le prochain démarrage.
+pub async fn remember_active(pool: &SqlitePool, id: &str) -> AppResult<()> {
+    sqlx::query("INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)")
+        .bind(ACTIVE_KEY)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Profil à ouvrir au démarrage : celui retenu s'il existe encore, sinon le plus
+/// ancien (créé s'il n'y en a aucun).
+pub async fn active(pool: &SqlitePool) -> AppResult<Profile> {
+    let remembered: Option<String> = sqlx::query_scalar("SELECT value FROM app_meta WHERE key = ?")
+        .bind(ACTIVE_KEY)
+        .fetch_optional(pool)
+        .await?;
+    // Le profil retenu a pu être supprimé entre-temps.
+    if let Some(id) = remembered
+        && let Ok(profile) = get(pool, &id).await
+    {
+        return Ok(profile);
+    }
+    ensure_default(pool).await
+}
+
 /// Réglages d'un module : la clé `key` du JSON `profiles.settings` (ADR 0010).
 pub async fn get_settings(
     pool: &SqlitePool,
@@ -176,6 +278,36 @@ mod tests {
         assert!(matches!(
             get(&pool, "absent").await,
             Err(AppError::NotFound(_))
+        ));
+    }
+
+    /// Créer, renommer, changer de disposition, supprimer ; jamais le dernier.
+    #[tokio::test]
+    async fn manages_several_profiles() {
+        let pool = connect_in_memory().await.unwrap();
+        let first = ensure_default(&pool).await.unwrap();
+        let child = create(&pool, " Léa ", "bepo").await.unwrap();
+        assert_eq!(child.name, "Léa");
+        assert_eq!(list(&pool).await.unwrap().len(), 2);
+        let renamed = update(&pool, &child.id, "Léa B.", "qwerty").await.unwrap();
+        assert_eq!(
+            (renamed.name.as_str(), renamed.keyboard_layout.as_str()),
+            ("Léa B.", "qwerty")
+        );
+        // Nom vide ou disposition inconnue refusés.
+        assert!(matches!(
+            create(&pool, "  ", "azerty").await,
+            Err(AppError::Invalid(_))
+        ));
+        assert!(update(&pool, &child.id, "x", "dvorak").await.is_err());
+        // Profil actif retenu ; supprimé, on revient au plus ancien.
+        remember_active(&pool, &child.id).await.unwrap();
+        assert_eq!(active(&pool).await.unwrap().id, child.id);
+        delete(&pool, &child.id).await.unwrap();
+        assert_eq!(active(&pool).await.unwrap().id, first.id);
+        assert!(matches!(
+            delete(&pool, &first.id).await,
+            Err(AppError::Invalid(_))
         ));
     }
 }

@@ -48,8 +48,8 @@ pub fn run() {
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
             let pool = tauri::async_runtime::block_on(db::connect(&data_dir.join(DB_FILE)))?;
-            // Un profil existe toujours : celui par défaut est créé au premier lancement.
-            let profile = tauri::async_runtime::block_on(db::profiles::ensure_default(&pool))?;
+            // Profil retenu au dernier lancement, sinon le plus ancien (créé si la base est vide).
+            let profile = tauri::async_runtime::block_on(db::profiles::active(&pool))?;
             // Pack de textes intégré, inséré une seule fois (F-25).
             tauri::async_runtime::block_on(db::builtin::seed(&pool))?;
 

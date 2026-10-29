@@ -170,7 +170,7 @@ pub struct DictationProfile {
 
 /// Réglages de dictée du profil actif ; défauts si absents.
 pub async fn load_settings(state: &AppState) -> AppResult<DictationSettings> {
-    let value = profiles::get_settings(&state.pool, &state.profile_id, SETTINGS_KEY).await?;
+    let value = profiles::get_settings(&state.pool, &state.profile_id(), SETTINGS_KEY).await?;
     Ok(DictationSettings::from_json(value.as_ref()))
 }
 
@@ -181,7 +181,7 @@ pub async fn store_settings(
 ) -> AppResult<DictationSettings> {
     let settings = settings.sanitized();
     let value = serde_json::to_value(&settings).map_err(|e| AppError::Invalid(e.to_string()))?;
-    profiles::save_settings(&state.pool, &state.profile_id, SETTINGS_KEY, &value).await?;
+    profiles::save_settings(&state.pool, &state.profile_id(), SETTINGS_KEY, &value).await?;
     Ok(settings)
 }
 
@@ -277,7 +277,7 @@ pub async fn start(
             )));
         }
         None => {
-            let done = texts::progress(&state.pool, &state.profile_id, &text.id).await?;
+            let done = texts::progress(&state.pool, &state.profile_id(), &text.id).await?;
             next_exercise(done, spans.len())
         }
     };
@@ -288,17 +288,17 @@ pub async fn start(
         start: span.start,
         end: span.end,
     };
-    let dictation = live(&state.profile_id, &text, exercise, settings)?;
+    let dictation = live(&state.profile_id(), &text, exercise, settings)?;
     // Session enregistrée ; une autre session en cours du profil est abandonnée.
     let row = sessions::start(
         &state.pool,
-        &state.profile_id,
+        &state.profile_id(),
         Some(&text.id),
         sessions::MODE_DICTATION,
         &session_json(&dictation.settings, exercise)?,
     )
     .await?;
-    texts::touch_progress(&state.pool, &state.profile_id, &text.id, None).await?;
+    texts::touch_progress(&state.pool, &state.profile_id(), &text.id, None).await?;
     let info = start_info(&row.id, &dictation, String::new(), 0);
     state.put_dictation(row.id, dictation);
     Ok(info)
@@ -502,8 +502,12 @@ pub async fn abandon(
 
 /// Dictée interrompue à proposer à la reprise, s'il y en a une (NF-06).
 pub async fn pending(state: &AppState) -> AppResult<Option<PendingDictation>> {
-    let Some(row) =
-        sessions::pending(&state.pool, &state.profile_id, sessions::Family::Dictation).await?
+    let Some(row) = sessions::pending(
+        &state.pool,
+        &state.profile_id(),
+        sessions::Family::Dictation,
+    )
+    .await?
     else {
         return Ok(None);
     };
@@ -575,7 +579,7 @@ pub async fn save_dictation_settings(
 pub async fn list_dictation_profiles(
     state: State<'_, AppState>,
 ) -> AppResult<Vec<DictationProfile>> {
-    let list = repo::list_profiles(&state.pool, &state.profile_id).await?;
+    let list = repo::list_profiles(&state.pool, &state.profile_id()).await?;
     Ok(list.into_iter().map(to_profile).collect())
 }
 
@@ -590,7 +594,7 @@ pub async fn save_dictation_profile(
 ) -> AppResult<DictationProfile> {
     let id = repo::save_profile(
         &state.pool,
-        &state.profile_id,
+        &state.profile_id(),
         id.as_deref(),
         &name,
         &settings,
@@ -607,7 +611,7 @@ pub async fn save_dictation_profile(
 #[tauri::command]
 #[specta::specta]
 pub async fn delete_dictation_profile(state: State<'_, AppState>, id: String) -> AppResult<()> {
-    repo::delete_profile(&state.pool, &state.profile_id, &id).await
+    repo::delete_profile(&state.pool, &state.profile_id(), &id).await
 }
 
 /// Commande : démarre une dictée.

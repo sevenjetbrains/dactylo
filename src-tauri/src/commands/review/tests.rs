@@ -95,14 +95,14 @@ fn single(word: &str, correct: bool) -> SessionWords {
 
 /// Applique des mots de session au profil actif, à l'instant `at`.
 async fn apply_at(state: &AppState, session_id: &str, words: SessionWords, at: i64) {
-    apply_session(&state.pool, &state.profile_id, session_id, &words, at)
+    apply_session(&state.pool, &state.profile_id(), session_id, &words, at)
         .await
         .unwrap();
 }
 
 /// Nombre de mots dus avant l'instant `before`.
 async fn due_count(state: &AppState, before: i64) -> usize {
-    words::due(&state.pool, &state.profile_id, before)
+    words::due(&state.pool, &state.profile_id(), before)
         .await
         .unwrap()
         .len()
@@ -117,7 +117,7 @@ async fn mistyped_word_becomes_due_with_details() {
     // La faute date d'hier : le mot est à réviser aujourd'hui.
     apply_session(
         &state.pool,
-        &state.profile_id,
+        &state.profile_id(),
         &session_id,
         &words,
         now_ms() - DAY_MS,
@@ -137,7 +137,7 @@ async fn mistyped_word_becomes_due_with_details() {
     assert_eq!((w.errors, w.encounters, w.streak), (1, 1, 0));
     // « la » a été rencontré mais n'est pas difficile.
     let mut conn = state.pool.acquire().await.unwrap();
-    let (_, la) = words::find(&mut conn, &state.profile_id, "la")
+    let (_, la) = words::find(&mut conn, &state.profile_id(), "la")
         .await
         .unwrap()
         .unwrap();
@@ -178,18 +178,30 @@ async fn slow_threshold_comes_from_settings() {
     store_settings(&state, ReviewSettings { slow_factor: 3.0 })
         .await
         .unwrap();
-    apply_session(&state.pool, &state.profile_id, &session_id, &slow, now_ms())
-        .await
-        .unwrap();
+    apply_session(
+        &state.pool,
+        &state.profile_id(),
+        &session_id,
+        &slow,
+        now_ms(),
+    )
+    .await
+    .unwrap();
     assert_eq!(overview(&state, 0).await.unwrap().tracked, 0);
     // Seuil 2 (et valeur hors bornes ramenée) : il l'est.
     let saved = store_settings(&state, ReviewSettings { slow_factor: 2.0 })
         .await
         .unwrap();
     assert_eq!(saved.slow_factor, 2.0);
-    apply_session(&state.pool, &state.profile_id, &session_id, &slow, now_ms())
-        .await
-        .unwrap();
+    apply_session(
+        &state.pool,
+        &state.profile_id(),
+        &session_id,
+        &slow,
+        now_ms(),
+    )
+    .await
+    .unwrap();
     assert_eq!(overview(&state, 0).await.unwrap().tracked, 1);
     let bounded = store_settings(&state, ReviewSettings { slow_factor: 0.0 })
         .await
@@ -292,7 +304,7 @@ async fn exercise_falls_back_to_upcoming_words() {
     // Faute maintenant : à réviser demain, donc pas due aujourd'hui.
     apply_session(
         &state.pool,
-        &state.profile_id,
+        &state.profile_id(),
         &session_id,
         &single("demain", false),
         now_ms(),

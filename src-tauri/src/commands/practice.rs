@@ -133,7 +133,7 @@ pub struct SessionSummary {
 
 /// Lit les réglages du profil actif ; défauts si absents.
 pub async fn load_settings(state: &AppState) -> AppResult<PracticeSettings> {
-    let value = profiles::get_settings(&state.pool, &state.profile_id, SETTINGS_KEY).await?;
+    let value = profiles::get_settings(&state.pool, &state.profile_id(), SETTINGS_KEY).await?;
     Ok(PracticeSettings::from_json(value.as_ref()))
 }
 
@@ -144,7 +144,7 @@ pub async fn store_settings(
 ) -> AppResult<PracticeSettings> {
     let settings = settings.sanitized();
     let value = serde_json::to_value(settings).map_err(|e| AppError::Invalid(e.to_string()))?;
-    profiles::save_settings(&state.pool, &state.profile_id, SETTINGS_KEY, &value).await?;
+    profiles::save_settings(&state.pool, &state.profile_id(), SETTINGS_KEY, &value).await?;
     Ok(settings)
 }
 
@@ -204,7 +204,7 @@ async fn start_generated(state: &AppState, content: &str) -> AppResult<SessionSt
     let settings_json = session_settings_json(&settings, exercise, Some(&content))?;
     let row = sessions::start(
         &state.pool,
-        &state.profile_id,
+        &state.profile_id(),
         None,
         sessions::MODE_REVIEW,
         &settings_json,
@@ -227,7 +227,7 @@ async fn start_generated(state: &AppState, content: &str) -> AppResult<SessionSt
     state.put_live(
         row.id,
         LiveSession {
-            profile_id: state.profile_id.clone(),
+            profile_id: state.profile_id(),
             text_id: None,
             settings,
             exercise,
@@ -273,7 +273,7 @@ pub async fn start(
             )));
         }
         None => {
-            let done = texts::progress(&state.pool, &state.profile_id, &text.id).await?;
+            let done = texts::progress(&state.pool, &state.profile_id(), &text.id).await?;
             next_exercise(done, spans.len())
         }
     };
@@ -289,13 +289,13 @@ pub async fn start(
     let settings_json = session_settings_json(&settings, exercise, None)?;
     let row = sessions::start(
         &state.pool,
-        &state.profile_id,
+        &state.profile_id(),
         Some(&text.id),
         sessions::MODE_COPY,
         &settings_json,
     )
     .await?;
-    texts::touch_progress(&state.pool, &state.profile_id, &text.id, None).await?;
+    texts::touch_progress(&state.pool, &state.profile_id(), &text.id, None).await?;
 
     // Le découpage en graphèmes vient du cœur et est envoyé tel quel à l'interface.
     let typing = TypingSession::new(
@@ -318,7 +318,7 @@ pub async fn start(
     state.put_live(
         row.id,
         LiveSession {
-            profile_id: state.profile_id.clone(),
+            profile_id: state.profile_id(),
             text_id: Some(text.id),
             settings,
             exercise,
@@ -464,7 +464,7 @@ pub async fn abandon(state: &AppState, session_id: &str) -> AppResult<()> {
 /// Session interrompue à proposer à la reprise, s'il y en a une (NF-06).
 pub async fn pending(state: &AppState) -> AppResult<Option<PendingSession>> {
     let Some(row) =
-        sessions::pending(&state.pool, &state.profile_id, sessions::Family::Typing).await?
+        sessions::pending(&state.pool, &state.profile_id(), sessions::Family::Typing).await?
     else {
         return Ok(None);
     };

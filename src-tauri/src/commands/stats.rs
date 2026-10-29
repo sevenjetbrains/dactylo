@@ -91,7 +91,7 @@ pub async fn compute_dashboard(
     period: Period,
     tz_offset_min: i32,
 ) -> AppResult<Dashboard> {
-    let samples = stats::samples(&state.pool, &state.profile_id).await?;
+    let samples = stats::samples(&state.pool, &state.profile_id()).await?;
     Ok(dashboard(&samples, period, now_ms(), tz_offset_min))
 }
 
@@ -102,7 +102,7 @@ pub async fn compute_keys(
     tz_offset_min: i32,
 ) -> AppResult<KeyReport> {
     let from = period_start(period, tz_offset_min);
-    let sessions = stats::keystrokes_since(&state.pool, &state.profile_id, from).await?;
+    let sessions = stats::keystrokes_since(&state.pool, &state.profile_id(), from).await?;
     // Chaque session est analysée à part : les temps ne se comparent qu'en son sein.
     let mut analyzer = KeyAnalyzer::new();
     for keystrokes in &sessions {
@@ -113,7 +113,7 @@ pub async fn compute_keys(
 
 /// Les `limit` dernières sessions terminées.
 pub async fn recent(state: &AppState, limit: u32) -> AppResult<Vec<RecentSession>> {
-    let rows = stats::recent(&state.pool, &state.profile_id, limit).await?;
+    let rows = stats::recent(&state.pool, &state.profile_id(), limit).await?;
     Ok(rows
         .into_iter()
         .map(|r| RecentSession {
@@ -135,7 +135,7 @@ pub async fn export_csv(
     labels: CsvLabels,
 ) -> AppResult<String> {
     let from = period_start(period, tz_offset_min);
-    let rows = stats::since(&state.pool, &state.profile_id, from).await?;
+    let rows = stats::since(&state.pool, &state.profile_id(), from).await?;
     // Mode et état traduits avec les libellés de l'interface.
     let to_csv = |r: SessionListRow| CsvSession {
         started_at: r.started_at,

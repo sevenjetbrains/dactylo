@@ -82,6 +82,23 @@ export const commands = {
 	wrapText: (sessionId: string, columns: number) => typedError<number[], ApiError>(__TAURI_INVOKE("wrap_text", { sessionId, columns })),
 	/**  Commande : texte suivant dans la bibliothèque (Ctrl+Entrée, F-07). */
 	nextTextId: (textId: string) => typedError<string | null, ApiError>(__TAURI_INVOKE("next_text_id", { textId })),
+	/**  Commande : profils existants (F-50). */
+	listProfiles: () => typedError<Profile[], ApiError>(__TAURI_INVOKE("list_profiles")),
+	/**  Commande : crée un profil (F-50). */
+	createProfile: (name: string, layout: Layout) => typedError<Profile, ApiError>(__TAURI_INVOKE("create_profile", { name, layout })),
+	/**  Commande : renomme un profil et change sa disposition. */
+	updateProfile: (id: string, name: string, layout: Layout) => typedError<Profile, ApiError>(__TAURI_INVOKE("update_profile", { id, name, layout })),
+	/**  Commande : supprime un profil ; renvoie le profil actif ensuite. */
+	deleteProfile: (id: string) => typedError<Profile, ApiError>(__TAURI_INVOKE("delete_profile", { id })),
+	/**  Commande : change de profil actif. */
+	switchProfile: (id: string) => typedError<Profile, ApiError>(__TAURI_INVOKE("switch_profile", { id })),
+	/**  Commande : disposition du profil actif (clavier virtuel, F-08). */
+	keyboardLayout: () => typedError<KeyboardLayout_Serialize, ApiError>(__TAURI_INVOKE("keyboard_layout")),
+	/**
+	 *  Commande : touches à frapper pour chaque graphème, dans la disposition du
+	 *  profil actif (F-08).
+	 */
+	keyboardKeys: (graphemes: string[]) => typedError<Press[][], ApiError>(__TAURI_INVOKE("keyboard_keys", { graphemes })),
 	/**  Commande : réglages du module Révision. */
 	getReviewSettings: () => typedError<ReviewSettings_Serialize, ApiError>(__TAURI_INVOKE("get_review_settings")),
 	/**  Commande : enregistre les réglages du module Révision. */
@@ -706,6 +723,68 @@ export type ExerciseInfo = {
 	count: number,
 };
 
+/**  Doigt conseillé pour une touche. */
+export type Finger = 
+/**  Auriculaire gauche. */
+"leftPinky" | 
+/**  Annulaire gauche. */
+"leftRing" | 
+/**  Majeur gauche. */
+"leftMiddle" | 
+/**  Index gauche. */
+"leftIndex" | 
+/**  Pouce gauche. */
+"leftThumb" | 
+/**  Pouce droit. */
+"rightThumb" | 
+/**  Index droit. */
+"rightIndex" | 
+/**  Majeur droit. */
+"rightMiddle" | 
+/**  Annulaire droit. */
+"rightRing" | 
+/**  Auriculaire droit. */
+"rightPinky";
+
+/**  Une touche du clavier. */
+export type KeyDef = KeyDef_Serialize | KeyDef_Deserialize;
+
+/**  Une touche du clavier. */
+export type KeyDef_Deserialize = {
+	/**  Code physique (`KeyboardEvent.code` : « KeyQ », « Digit1 », « Space »…). */
+	code: string,
+	/**  Caractère sans modificateur, ou nom de la touche (« Espace »). */
+	base: string,
+	/**  Caractère avec Maj, s'il diffère. */
+	shift?: string | null,
+	/**  Caractère avec AltGr. */
+	altgr?: string | null,
+	/**  Le caractère de base est-il une touche morte (^, ¨…) ? */
+	dead: boolean,
+	/**  Doigt conseillé. */
+	finger: Finger,
+	/**  Largeur, en largeurs de touche ordinaire. */
+	width: number | null,
+};
+
+/**  Une touche du clavier. */
+export type KeyDef_Serialize = {
+	/**  Code physique (`KeyboardEvent.code` : « KeyQ », « Digit1 », « Space »…). */
+	code: string,
+	/**  Caractère sans modificateur, ou nom de la touche (« Espace »). */
+	base: string,
+	/**  Caractère avec Maj, s'il diffère. */
+	shift: string | null,
+	/**  Caractère avec AltGr. */
+	altgr: string | null,
+	/**  Le caractère de base est-il une touche morte (^, ¨…) ? */
+	dead: boolean,
+	/**  Doigt conseillé. */
+	finger: Finger,
+	/**  Largeur, en largeurs de touche ordinaire. */
+	width: number | null,
+};
+
 /**  Nature d'une frappe. */
 export type KeyKind = 
 /**  Saisie d'un graphème. */
@@ -767,6 +846,25 @@ export type KeyStat_Serialize = {
 	avgMs: number | null,
 };
 
+/**  Disposition complète, rangée par rangée, de haut en bas. */
+export type KeyboardLayout = KeyboardLayout_Serialize | KeyboardLayout_Deserialize;
+
+/**  Disposition complète, rangée par rangée, de haut en bas. */
+export type KeyboardLayout_Deserialize = {
+	/**  Disposition décrite. */
+	id: Layout,
+	/**  Rangées de touches. */
+	rows: KeyDef_Deserialize[][],
+};
+
+/**  Disposition complète, rangée par rangée, de haut en bas. */
+export type KeyboardLayout_Serialize = {
+	/**  Disposition décrite. */
+	id: Layout,
+	/**  Rangées de touches. */
+	rows: KeyDef_Serialize[][],
+};
+
 /**  Frappe brute envoyée par l'interface. */
 export type Keystroke = Keystroke_Serialize | Keystroke_Deserialize;
 
@@ -793,6 +891,15 @@ export type Keystroke_Serialize = {
 	/**  Temps actif écoulé depuis la première frappe, pauses exclues. */
 	tMs: number,
 };
+
+/**  Disposition ; valeurs identiques à la contrainte `profiles.keyboard_layout`. */
+export type Layout = 
+/**  AZERTY français (PC). */
+"azerty" | 
+/**  QWERTY américain. */
+"qwerty" | 
+/**  BÉPO (disposition française ergonomique). */
+"bepo";
 
 /**  Lignes retenues après nettoyage, bornes comprises, numérotées à partir de 1. */
 export type LineSelection = {
@@ -1056,6 +1163,18 @@ export type PracticeSettings_Serialize = {
 	showKeyboard: boolean,
 	/**  Son à chaque frappe, différent sur une erreur (F-51). */
 	typingSounds: boolean,
+};
+
+/**  Une frappe de touche, avec ses modificateurs. */
+export type Press = {
+	/**  Code de la touche. */
+	code: string,
+	/**  Maj enfoncée. */
+	shift: boolean,
+	/**  AltGr enfoncée. */
+	altgr: boolean,
+	/**  Verrouillage des majuscules (AZERTY Windows : É, À, Ç…). */
+	caps: boolean,
 };
 
 /**  Profil utilisateur. */

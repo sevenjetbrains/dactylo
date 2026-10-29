@@ -31,5 +31,5 @@ pub fn app_info() -> AppInfo {
 #[tauri::command]
 #[specta::specta]
 pub async fn current_profile(state: State<'_, AppState>) -> AppResult<Profile> {
-    profiles::get(&state.pool, &state.profile_id).await
+    profiles::get(&state.pool, &state.profile_id()).await
 }

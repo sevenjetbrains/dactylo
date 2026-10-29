@@ -90,7 +90,7 @@ async fn save(state: &AppState, record: TextRecord) -> AppResult<TextSummary> {
     state.bus.publish(&DomainEvent::TextImported {
         text_id: id.clone(),
     });
-    texts::summary(&state.pool, &state.profile_id, &id).await
+    texts::summary(&state.pool, &state.profile_id(), &id).await
 }
 
 /// Ajoute un texte collé ; son contenu est normalisé (NFC, fins de ligne).
@@ -148,7 +148,7 @@ pub async fn import_pdf_text(state: &AppState, input: PdfText) -> AppResult<Text
 
 /// Liste filtrée et triée (F-23).
 pub async fn list(state: &AppState, query: &TextQuery) -> AppResult<Vec<TextSummary>> {
-    let all = texts::list(&state.pool, &state.profile_id).await?;
+    let all = texts::list(&state.pool, &state.profile_id()).await?;
     Ok(library::apply(all, query, |t| TextFacts {
         title: &t.title,
         tags: &t.tags,
@@ -174,7 +174,7 @@ pub async fn update(state: &AppState, id: &str, input: TextUpdate) -> AppResult<
         },
     )
     .await?;
-    texts::summary(&state.pool, &state.profile_id, id).await
+    texts::summary(&state.pool, &state.profile_id(), id).await
 }
 
 /// Duplique un texte : même contenu et réglages, titre marqué « (copie) ».

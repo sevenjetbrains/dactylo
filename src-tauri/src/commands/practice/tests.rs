@@ -107,7 +107,7 @@ async fn complete_session_is_saved_with_stats_errors_and_events() {
         _ => None,
     });
     let (profile_id, words) = completed.expect("SessionCompleted publié");
-    assert_eq!(*profile_id, state.profile_id);
+    assert_eq!(*profile_id, state.profile_id());
     // Les deux mots, « la » juste et « forêt » faux, accompagnent la fin de session.
     let typed: Vec<(&str, bool)> = words
         .attempts
@@ -117,7 +117,7 @@ async fn complete_session_is_saved_with_stats_errors_and_events() {
     assert_eq!(typed, [("la", true), ("forêt", false)]);
     assert!(events.contains(&DomainEvent::WordMistyped {
         session_id: start.session_id.clone(),
-        profile_id: state.profile_id.clone(),
+        profile_id: state.profile_id(),
         expected: "forêt".into(),
         typed: "foret".into(),
     }));
@@ -188,11 +188,7 @@ async fn interrupted_session_is_offered_for_resumption() {
         .unwrap();
 
     // Nouvel état sur la même base : comme après une fermeture brutale.
-    let restarted = AppState::new(
-        state.pool.clone(),
-        state.bus.clone(),
-        state.profile_id.clone(),
-    );
+    let restarted = AppState::new(state.pool.clone(), state.bus.clone(), state.profile_id());
     // La reprise est proposée avec le titre et 25 % d'avancement.
     let offer = pending(&restarted).await.unwrap().unwrap();
     assert_eq!(offer.session_id, s.session_id);
