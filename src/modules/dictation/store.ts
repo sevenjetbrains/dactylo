@@ -147,11 +147,13 @@ export const useDictationStore = create<DictationState>()((set, get) => {
     },
 
     play: async (index, repeat = false) => {
-      const { session, clock } = get();
+      const { session, clock, current: before } = get();
       if (!session) return;
       clearTimer();
-      // Le chronomètre démarre à la première lecture, et repart après une pause.
+      // Le chronomètre démarre à la première lecture, et repart après une pause ; le
+      // segment lu est affiché tout de suite, sans attendre la réponse du moteur.
       set({
+        current: index,
         status: 'speaking',
         error: null,
         clock: clock.since === null ? { ...clock, since: clockNow.now() } : clock,
@@ -166,7 +168,8 @@ export const useDictationStore = create<DictationState>()((set, get) => {
         repeats[index] = spoken.repeats;
         set({ current: index, utterance: spoken.utterance, repeats });
       } catch (e) {
-        set({ status: get().current >= 0 ? 'listening' : 'ready', error: messageOf(e) });
+        // Lecture refusée : on revient au segment d'avant.
+        set({ current: before, status: before >= 0 ? 'listening' : 'ready', error: messageOf(e) });
       }
     },
 

@@ -203,6 +203,22 @@ async fn draft_survives_restart_and_resumes() {
     assert_eq!(resumed.segment_words, s.segment_words);
 }
 
+/// Une dictée ouverte sans rien taper n'est pas proposée à la reprise : elle disparaît.
+#[tokio::test]
+async fn empty_dictation_is_not_offered() {
+    let (state, _, _) = test_support::state_with_speech().await;
+    let text = add_text(&state, PARAGRAPH).await;
+    let s = start(&state, Some(text), None).await.unwrap();
+    speak_segment(&state, &s.session_id, 0, false)
+        .await
+        .unwrap();
+    assert!(pending(&state).await.unwrap().is_none());
+    assert!(matches!(
+        sessions::get(&state.pool, &s.session_id).await,
+        Err(AppError::NotFound(_))
+    ));
+}
+
 /// Abandon : gardée avec son brouillon, ou supprimée si rien n'a été tapé.
 #[tokio::test]
 async fn abandon_keeps_typed_dictations_only() {

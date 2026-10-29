@@ -509,6 +509,11 @@ pub async fn pending(state: &AppState) -> AppResult<Option<PendingDictation>> {
     };
     let d = take(state, &row.id).await?;
     let (typed, _) = repo::draft(&state.pool, &row.id).await?;
+    // Une dictée ouverte sans rien taper n'a rien à reprendre : elle est supprimée.
+    if typed.trim().is_empty() {
+        sessions::abandon(&state.pool, &row.id).await?;
+        return Ok(None);
+    }
     let pending = PendingDictation {
         session_id: row.id.clone(),
         text_id: d.text_id.clone(),
