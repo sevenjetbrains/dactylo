@@ -7,8 +7,20 @@ import { NavLink, Outlet } from 'react-router';
 import { commands, unwrap, type Profile } from '@/shared/api';
 import { cn } from '@/shared/lib/utils';
 
-import { buildMenu } from './menu';
+import { buildMenu, type MenuEntry } from './menu';
 import type { ModuleManifest } from './types';
+
+/** Pastille d'une entrée de menu : le hook du module donne le nombre affiché. */
+function MenuBadge({ useBadge }: { useBadge: NonNullable<MenuEntry['useBadge']> }) {
+  const count = useBadge();
+  // Rien à signaler : pas de pastille.
+  if (!count) return null;
+  return (
+    <span className="ml-auto min-w-6 rounded-full bg-accent px-2 py-0.5 text-center text-xs font-bold text-accent-foreground tabular-nums">
+      {count}
+    </span>
+  );
+}
 
 /** Menu construit depuis le registre ; la page du module s'affiche à droite. */
 export function Shell({ modules }: { modules: readonly ModuleManifest[] }) {
@@ -44,7 +56,7 @@ export function Shell({ modules }: { modules: readonly ModuleManifest[] }) {
           </span>
           {t('common:appName')}
         </p>
-        {menu.map(({ moduleId, path, labelKey, icon: Icon }) => (
+        {menu.map(({ moduleId, path, labelKey, icon: Icon, useBadge }) => (
           <NavLink
             key={moduleId}
             to={path}
@@ -62,6 +74,7 @@ export function Shell({ modules }: { modules: readonly ModuleManifest[] }) {
           >
             <Icon aria-hidden className="size-5" />
             {t(`${moduleId}:${labelKey}`)}
+            {useBadge && <MenuBadge useBadge={useBadge} />}
           </NavLink>
         ))}
         {/* Profil actif, poussé en bas du menu. */}

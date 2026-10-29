@@ -1,0 +1,97 @@
+{
+  "menu": "Statistics",
+  "title": "Statistics",
+  "period": {
+    "label": "Period",
+    "week": "7 days",
+    "month": "30 days",
+    "all": "All"
+  },
+  "export": "Export to CSV",
+  "chart": {
+    "title": "Speed (net WPM) per session",
+    "summary_one": "{{to}} WPM in 1 session",
+    "summary_other": "from {{from}} to {{to}} WPM in {{count}} sessions",
+    "record": "Personal best · {{value}}",
+    "empty": "No completed session in this period."
+  },
+  "tiles": {
+    "accuracy": "Average accuracy",
+    "training": "Total practice time",
+    "streak": "Current streak"
+  },
+  "days_one": "{{count}} day",
+  "days_other": "{{count}} days",
+  "keys": {
+    "title": "Error rate per key",
+    "legend": "Colour legend",
+    "low": "Low",
+    "high": "High",
+    "detail": "{{key}}: {{errors}} errors out of {{presses}} keystrokes ({{rate}} %), {{ms}} ms on average",
+    "unused": "{{key}}: not typed yet",
+    "accentShare": "Accented letters (é, è, ç, à, ù) and dead keys (^, ¨) account for {{share}} % of your errors."
+  },
+  "bigrams": {
+    "title": "Slowest bigrams",
+    "ms": "{{value}} ms",
+    "empty": "Not enough keystrokes yet to measure key sequences."
+  },
+  "words": {
+    "title": "Difficult words",
+    "counts": "{{due}} to review today · {{tracked}} tracked · {{mastered}} mastered",
+    "add": "Add a word",
+    "addLabel": "Word to add",
+    "addSubmit": "Add",
+    "review_one": "Review the word",
+    "review_other": "Review the {{count}} words",
+    "empty": "No difficult words yet: words you mistype or type slowly will show up here.",
+    "slow": "Slowness",
+    "streak": "{{count}} success(es) in a row out of {{total}}",
+    "markMastered": "Mark as mastered",
+    "markMasteredWord": "Mark “{{word}}” as mastered",
+    "remove": "Remove",
+    "removeWord": "Remove “{{word}}”",
+    "columns": {
+      "word": "Word",
+      "typed": "Typed forms",
+      "error": "Main mistake",
+      "ratio": "Errors / seen",
+      "mastery": "Mastery",
+      "review": "Review",
+      "actions": "Actions"
+    },
+    "today": "Today"
+  },
+  "errorType": {
+    "accent": "Accent",
+    "missing_letter": "Missing letter",
+    "extra_letter": "Extra letter",
+    "transposition": "Swapped letters",
+    "substitution": "Wrong letter",
+    "missing_word": "Missing word",
+    "extra_word": "Extra word",
+    "punctuation": "Punctuation",
+    "case": "Capitalisation"
+  },
+  "csv": {
+    "headers": [
+      "Date",
+      "Text",
+      "Mode",
+      "Status",
+      "Duration (s)",
+      "Raw WPM",
+      "Net WPM",
+      "CPM",
+      "Accuracy (%)",
+      "Errors"
+    ],
+    "modes": {
+      "copy": "Copy",
+      "dictation": "Dictation",
+      "review": "Review"
+    },
+    "completed": "Completed",
+    "abandoned": "Abandoned"
+  }
+}

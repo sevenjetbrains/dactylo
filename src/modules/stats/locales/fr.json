@@ -1,0 +1,97 @@
+{
+  "menu": "Statistiques",
+  "title": "Statistiques",
+  "period": {
+    "label": "Période",
+    "week": "7 jours",
+    "month": "30 jours",
+    "all": "Tout"
+  },
+  "export": "Exporter en CSV",
+  "chart": {
+    "title": "Vitesse (MPM net) par session",
+    "summary_one": "{{to}} MPM en 1 session",
+    "summary_other": "de {{from}} à {{to}} MPM en {{count}} sessions",
+    "record": "Record personnel · {{value}}",
+    "empty": "Aucune session terminée sur la période."
+  },
+  "tiles": {
+    "accuracy": "Précision moyenne",
+    "training": "Temps total d'entraînement",
+    "streak": "Série en cours"
+  },
+  "days_one": "{{count}} jour",
+  "days_other": "{{count}} jours",
+  "keys": {
+    "title": "Taux d'erreur par touche",
+    "legend": "Légende des couleurs",
+    "low": "Faible",
+    "high": "Élevé",
+    "detail": "{{key}} : {{errors}} erreurs sur {{presses}} frappes ({{rate}} %), {{ms}} ms en moyenne",
+    "unused": "{{key}} : pas encore tapée",
+    "accentShare": "Les accents (é, è, ç, à, ù) et les touches mortes (^, ¨) concentrent {{share}} % de vos erreurs."
+  },
+  "bigrams": {
+    "title": "Bigrammes les plus lents",
+    "ms": "{{value}} ms",
+    "empty": "Pas encore assez de frappes pour mesurer les enchaînements."
+  },
+  "words": {
+    "title": "Mots difficiles",
+    "counts": "{{due}} à réviser aujourd'hui · {{tracked}} suivis · {{mastered}} maîtrisés",
+    "add": "Ajouter un mot",
+    "addLabel": "Mot à ajouter",
+    "addSubmit": "Ajouter",
+    "review_one": "Réviser le mot",
+    "review_other": "Réviser les {{count}} mots",
+    "empty": "Aucun mot difficile pour l'instant : les mots mal tapés ou tapés lentement apparaîtront ici.",
+    "slow": "Lenteur",
+    "streak": "{{count}} réussite(s) de suite sur {{total}}",
+    "markMastered": "Marquer maîtrisé",
+    "markMasteredWord": "Marquer « {{word}} » maîtrisé",
+    "remove": "Retirer",
+    "removeWord": "Retirer « {{word}} »",
+    "columns": {
+      "word": "Mot",
+      "typed": "Formes tapées",
+      "error": "Faute dominante",
+      "ratio": "Erreurs / vus",
+      "mastery": "Maîtrise",
+      "review": "Révision",
+      "actions": "Actions"
+    },
+    "today": "Aujourd'hui"
+  },
+  "errorType": {
+    "accent": "Accent",
+    "missing_letter": "Lettre manquante",
+    "extra_letter": "Lettre en trop",
+    "transposition": "Inversion",
+    "substitution": "Lettre erronée",
+    "missing_word": "Mot oublié",
+    "extra_word": "Mot en trop",
+    "punctuation": "Ponctuation",
+    "case": "Majuscule"
+  },
+  "csv": {
+    "headers": [
+      "Date",
+      "Texte",
+      "Mode",
+      "État",
+      "Durée (s)",
+      "MPM brut",
+      "MPM net",
+      "CPM",
+      "Précision (%)",
+      "Erreurs"
+    ],
+    "modes": {
+      "copy": "Copie",
+      "dictation": "Dictée",
+      "review": "Révision"
+    },
+    "completed": "Terminée",
+    "abandoned": "Abandonnée"
+  }
+}

@@ -13,20 +13,22 @@ import { modules } from './registry';
 import { buildRoutes } from './router';
 import type { ModuleManifest } from './types';
 
-// Backend simulé : les appels de l'accueil restent en attente, sans effet.
-vi.mock('@/shared/api', () => ({
-  commands: {
-    currentProfile: vi.fn(() => new Promise(() => {})),
-    pendingSession: vi.fn(() => new Promise(() => {})),
-  },
-  unwrap: (p: Promise<unknown>) => p,
-}));
+// Backend simulé : les appels de l'accueil et de la pastille Révision restent en
+// attente, sans effet ; aucun événement n'arrive.
+vi.mock('@/shared/api', () => {
+  const pending = () => new Promise(() => {});
+  return {
+    commands: new Proxy({}, { get: () => vi.fn(pending) }),
+    events: { domainEventPayload: { listen: vi.fn(pending) } },
+    unwrap: (p: Promise<unknown>) => p,
+  };
+});
 
 /** Module factice « Hello », pour prouver qu'un module s'ajoute en une ligne. */
 const hello: ModuleManifest = {
   id: 'hello',
   route: { path: 'hello', component: () => <p>Bonjour depuis Hello</p> },
-  menu: { labelKey: 'menu', icon: Bug, order: 50 },
+  menu: { labelKey: 'menu', icon: Bug, order: 60, useBadge: () => 7 },
   locales: { fr: { menu: 'Hello' } },
 };
 
@@ -45,6 +47,8 @@ describe('registre de modules', () => {
       'home',
       'practice',
       'library',
+      'review',
+      'stats',
       'hello',
       'settings',
     ]);
@@ -73,6 +77,7 @@ describe('registre de modules', () => {
     expect(await screen.findByText('Bonjour depuis Hello')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Accueil' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: 'Réglages' })).toHaveAttribute('href', '/settings');
-    expect(screen.getByRole('link', { name: 'Hello' })).toHaveAttribute('href', '/hello');
+    // La pastille déclarée par le module s'affiche dans son lien.
+    expect(screen.getByRole('link', { name: /^Hellos*7$/ })).toHaveAttribute('href', '/hello');
   });
 });

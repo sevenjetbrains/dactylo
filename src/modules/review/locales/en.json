@@ -1,0 +1,44 @@
+{
+  "menu": "Review",
+  "dueTitle_one": "1 word to review today",
+  "dueTitle_other": "{{count}} words to review today",
+  "nothingDueTitle": "Nothing to review today",
+  "counts": "{{tracked}} tracked · {{mastered}} mastered",
+  "dueList": "Words to review today",
+  "aheadHint": "You are up to date. You can get ahead on the next words to review.",
+  "empty": {
+    "title": "No difficult words yet",
+    "body": "A word you mistype, or type much more slowly than the others, lands here. It then comes back at growing intervals, until 3 successes in a row.",
+    "action": "Practice"
+  },
+  "exercises": {
+    "shuffled": {
+      "eyebrow": "Shuffled words",
+      "title": "Each word, once",
+      "body": "The words to review, in random order."
+    },
+    "repeated": {
+      "eyebrow": "Repeated words",
+      "title": "Build the habit",
+      "body": "Each word several times in a row, to set the key sequence."
+    },
+    "sentences": {
+      "eyebrow": "Sentences",
+      "title": "In context",
+      "body": "Sentences from your library that contain these words."
+    }
+  },
+  "times": "Repetitions",
+  "timesValue_one": "{{count}} time",
+  "timesValue_other": "{{count}} times",
+  "start": "Start the exercise",
+  "noSentence": "No sentence in the library contains these words. Try shuffled or repeated words.",
+  "nothingToReview": "No words left to review.",
+  "allWords": "See all difficult words",
+  "settings": {
+    "title": "Review",
+    "slowFactor": "Slow word threshold",
+    "factor": "{{value}} times the average speed",
+    "slowFactorHint": "A word typed more slowly than this threshold, compared with the other words of the session, becomes a difficult word."
+  }
+}

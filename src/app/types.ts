@@ -28,6 +28,11 @@ export interface ModuleManifest {
     icon: LucideIcon;
     /** Rang dans le menu, croissant. */
     order: number;
+    /**
+     * Hook qui donne le nombre affiché en pastille à côté du libellé (ex. mots à
+     * réviser) ; `null` ou 0 : pas de pastille.
+     */
+    useBadge?: () => number | null;
   };
   /** Panneau ajouté à la page Réglages. */
   settingsPanel?: {

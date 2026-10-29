@@ -12,6 +12,8 @@ export interface MenuEntry {
   labelKey: string;
   /** Icône. */
   icon: NonNullable<ModuleManifest['menu']>['icon'];
+  /** Hook de la pastille, s'il y en a une. */
+  useBadge?: NonNullable<ModuleManifest['menu']>['useBadge'];
 }
 
 /** Entrées du menu, triées par `order`, pour les modules qui en déclarent une. */
@@ -25,6 +27,7 @@ export function buildMenu(modules: readonly ModuleManifest[]): MenuEntry[] {
       path: `/${module.route.path}`,
       labelKey: menu.labelKey,
       icon: menu.icon,
+      useBadge: menu.useBadge,
     }));
 }
 

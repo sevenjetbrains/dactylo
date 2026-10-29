@@ -1,0 +1,44 @@
+{
+  "menu": "Révision",
+  "dueTitle_one": "1 mot à réviser aujourd'hui",
+  "dueTitle_other": "{{count}} mots à réviser aujourd'hui",
+  "nothingDueTitle": "Rien à réviser aujourd'hui",
+  "counts": "{{tracked}} suivis · {{mastered}} maîtrisés",
+  "dueList": "Mots à réviser aujourd'hui",
+  "aheadHint": "Vous êtes à jour. Vous pouvez vous avancer sur les prochains mots à réviser.",
+  "empty": {
+    "title": "Aucun mot difficile pour l'instant",
+    "body": "Un mot mal tapé, ou tapé nettement plus lentement que les autres, entre ici. Il revient ensuite à intervalles croissants, jusqu'à 3 réussites de suite.",
+    "action": "S'entraîner"
+  },
+  "exercises": {
+    "shuffled": {
+      "eyebrow": "Mots mélangés",
+      "title": "Chaque mot, une fois",
+      "body": "Les mots à réviser, dans le désordre."
+    },
+    "repeated": {
+      "eyebrow": "Mots répétés",
+      "title": "Ancrer le geste",
+      "body": "Chaque mot plusieurs fois de suite, pour fixer l'enchaînement des touches."
+    },
+    "sentences": {
+      "eyebrow": "Phrases",
+      "title": "En contexte",
+      "body": "Les phrases de votre bibliothèque qui contiennent ces mots."
+    }
+  },
+  "times": "Répétitions",
+  "timesValue_one": "{{count}} fois",
+  "timesValue_other": "{{count}} fois",
+  "start": "Lancer l'exercice",
+  "noSentence": "Aucune phrase de la bibliothèque ne contient ces mots. Essayez les mots mélangés ou répétés.",
+  "nothingToReview": "Plus aucun mot à réviser.",
+  "allWords": "Voir tous les mots difficiles",
+  "settings": {
+    "title": "Révision",
+    "slowFactor": "Seuil de lenteur d'un mot",
+    "factor": "{{value}} fois la vitesse moyenne",
+    "slowFactorHint": "Un mot tapé plus lentement que ce seuil, par rapport aux autres mots de la session, devient un mot difficile."
+  }
+}
