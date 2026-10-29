@@ -16,6 +16,53 @@ pub const INITIAL_EASE: f64 = 2.5;
 /// Facteur de facilité minimal de SM-2 : en dessous, les intervalles stagnent.
 pub const MIN_EASE: f64 = 1.3;
 
+/// Seuil de lenteur minimal : en dessous, des écarts normaux de rythme suffiraient
+/// à rendre un mot « lent ».
+pub const MIN_SLOW_FACTOR: f64 = 1.1;
+
+/// Seuil de lenteur maximal.
+pub const MAX_SLOW_FACTOR: f64 = 5.0;
+
+/// Réglages du module Révision, rangés sous la clé `review` de `profiles.settings`
+/// (ADR 0010).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+#[serde(rename_all = "camelCase", default)]
+pub struct ReviewSettings {
+    /// Un mot tapé plus de `slow_factor` fois plus lentement que la moyenne de la
+    /// session devient difficile (F-40).
+    pub slow_factor: f64,
+}
+
+impl Default for ReviewSettings {
+    /// Seuil de 1,5 (F-40).
+    fn default() -> Self {
+        Self {
+            slow_factor: crate::typing::DEFAULT_SLOW_FACTOR,
+        }
+    }
+}
+
+impl ReviewSettings {
+    /// Ramène le seuil dans ses bornes ; une valeur non finie reprend le défaut.
+    pub fn sanitized(self) -> Self {
+        let slow_factor = if self.slow_factor.is_finite() {
+            self.slow_factor.clamp(MIN_SLOW_FACTOR, MAX_SLOW_FACTOR)
+        } else {
+            Self::default().slow_factor
+        };
+        Self { slow_factor }
+    }
+
+    /// Lit la clé `review` ; absente ou illisible → défauts.
+    pub fn from_json(value: Option<&serde_json::Value>) -> Self {
+        value
+            .and_then(|v| serde_json::from_value::<Self>(v.clone()).ok())
+            .unwrap_or_default()
+            .sanitized()
+    }
+}
+
 /// Résultat d'une révision, du point de vue du planificateur.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
@@ -158,6 +205,28 @@ mod tests {
         assert_eq!(s, SrsState::default());
         let back: SrsState = serde_json::from_value(serde_json::to_value(s).unwrap()).unwrap();
         assert_eq!(back, s);
+    }
+
+    /// Réglages : défaut 1,5, bornes, valeurs illisibles.
+    #[test]
+    fn review_settings_are_sanitized() {
+        assert_eq!(ReviewSettings::from_json(None).slow_factor, 1.5);
+        let read = |v: serde_json::Value| ReviewSettings::from_json(Some(&v)).slow_factor;
+        assert_eq!(read(serde_json::json!({ "slowFactor": 2.0 })), 2.0);
+        assert_eq!(
+            read(serde_json::json!({ "slowFactor": 0.2 })),
+            MIN_SLOW_FACTOR
+        );
+        assert_eq!(
+            read(serde_json::json!({ "slowFactor": 99 })),
+            MAX_SLOW_FACTOR
+        );
+        assert_eq!(read(serde_json::json!({ "slowFactor": "x" })), 1.5);
+        assert_eq!(read(serde_json::json!({})), 1.5);
+        let nan = ReviewSettings {
+            slow_factor: f64::NAN,
+        };
+        assert_eq!(nan.sanitized().slow_factor, 1.5);
     }
 
     /// Les notes SM-2 associées aux trois résultats.

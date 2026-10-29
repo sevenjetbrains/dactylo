@@ -374,6 +374,15 @@ pub async fn get(pool: &SqlitePool, id: &str) -> AppResult<TextContent> {
         .ok_or_else(|| AppError::NotFound(format!("texte {id}")))
 }
 
+/// Contenus de tous les textes, du plus récent au plus ancien (phrases de révision, F-44).
+pub async fn contents(pool: &SqlitePool) -> AppResult<Vec<String>> {
+    Ok(
+        sqlx::query_scalar("SELECT content FROM texts ORDER BY created_at DESC, id DESC")
+            .fetch_all(pool)
+            .await?,
+    )
+}
+
 /// Toutes les étiquettes utilisées, triées.
 pub async fn tags(pool: &SqlitePool) -> AppResult<Vec<String>> {
     Ok(sqlx::query_scalar(

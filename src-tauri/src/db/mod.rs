@@ -8,6 +8,8 @@ pub mod profiles;
 pub mod sessions;
 /// Textes de la bibliothèque.
 pub mod texts;
+/// Mots suivis et leurs tentatives (F-40 à F-45).
+pub mod words;
 
 use std::path::Path;
 use std::str::FromStr;

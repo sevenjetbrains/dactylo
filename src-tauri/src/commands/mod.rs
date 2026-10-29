@@ -1,7 +1,8 @@
 //! Registre des commandes exposées à l'interface.
 //!
-//! Chaque module a son fichier `commands/<nom>.rs` et **une ligne** dans
-//! `collect_commands!` ci-dessous (voir ADR 0005).
+//! Chaque module a son fichier `commands/<nom>.rs`, ses lignes dans
+//! `collect_commands!` ci-dessous et, s'il écoute le bus, une ligne dans
+//! `subscribe_modules` (voir ADR 0005).
 
 /// Informations sur l'application et profil actif.
 pub mod app;
@@ -9,8 +10,14 @@ pub mod app;
 pub mod library;
 /// Mode Copie : réglages et sessions.
 pub mod practice;
+/// Révision : mots difficiles, révision du jour, exercices générés.
+pub mod review;
 
+use std::sync::Arc;
+
+use dactylo_core::events::EventBus;
 use specta_typescript::Typescript;
+use sqlx::SqlitePool;
 use tauri_specta::{Builder, collect_commands, collect_events};
 
 use crate::events::DomainEventPayload;
@@ -44,10 +51,23 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             practice::resume_session,
             practice::wrap_text,
             practice::next_text_id,
+            review::get_review_settings,
+            review::save_review_settings,
+            review::review_overview,
+            review::difficult_words,
+            review::add_word,
+            review::remove_word,
+            review::mark_word_mastered,
+            review::review_exercise,
         ])
         .events(collect_events![DomainEventPayload])
         // Les i64 sont des horodatages en ms et des compteurs : très en deçà de 2^53.
         .dangerously_cast_bigints_to_number()
+}
+
+/// Abonne au bus les modules qui écoutent les événements de domaine (ADR 0006).
+pub fn subscribe_modules(bus: &Arc<EventBus>, pool: &SqlitePool) {
+    bus.subscribe(Arc::new(review::ReviewSubscriber::new(pool.clone(), bus)));
 }
 
 /// Écrit le client TypeScript typé dans `src/shared/api/bindings.ts`.

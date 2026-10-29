@@ -49,6 +49,22 @@ export const commands = {
 	wrapText: (sessionId: string, columns: number) => typedError<number[], ApiError>(__TAURI_INVOKE("wrap_text", { sessionId, columns })),
 	/**  Commande : texte suivant dans la bibliothèque (Ctrl+Entrée, F-07). */
 	nextTextId: (textId: string) => typedError<string | null, ApiError>(__TAURI_INVOKE("next_text_id", { textId })),
+	/**  Commande : réglages du module Révision. */
+	getReviewSettings: () => typedError<ReviewSettings_Serialize, ApiError>(__TAURI_INVOKE("get_review_settings")),
+	/**  Commande : enregistre les réglages du module Révision. */
+	saveReviewSettings: (settings: ReviewSettings_Deserialize) => typedError<ReviewSettings_Serialize, ApiError>(__TAURI_INVOKE("save_review_settings", { settings })),
+	/**  Commande : mots à réviser aujourd'hui, suivis et maîtrisés (F-43). */
+	reviewOverview: (tzOffsetMinutes: number) => typedError<ReviewOverview, ApiError>(__TAURI_INVOKE("review_overview", { tzOffsetMinutes })),
+	/**  Commande : tableau des mots difficiles (F-41). */
+	difficultWords: () => typedError<DifficultWord_Serialize[], ApiError>(__TAURI_INVOKE("difficult_words")),
+	/**  Commande : ajoute un mot à la révision ; renvoie sa forme normalisée (F-45). */
+	addWord: (word: string) => typedError<string, ApiError>(__TAURI_INVOKE("add_word", { word })),
+	/**  Commande : retire un mot de la liste (F-45). */
+	removeWord: (word: string) => typedError<null, ApiError>(__TAURI_INVOKE("remove_word", { word })),
+	/**  Commande : marque un mot maîtrisé (F-45). */
+	markWordMastered: (word: string) => typedError<null, ApiError>(__TAURI_INVOKE("mark_word_mastered", { word })),
+	/**  Commande : texte d'un exercice de révision (F-44). */
+	reviewExercise: (kind: ReviewExerciseKind, tzOffsetMinutes: number) => typedError<string, ApiError>(__TAURI_INVOKE("review_exercise", { kind, tzOffsetMinutes })),
 };
 
 /** Events */
@@ -129,6 +145,49 @@ export type CorrectionMode =
 "blocking" | 
 /**  On avance ; l'erreur reste comptée. */
 "free";
+
+/**  Ligne du tableau « Mots difficiles » (F-41). */
+export type DifficultWord = DifficultWord_Serialize | DifficultWord_Deserialize;
+
+/**  Ligne du tableau « Mots difficiles » (F-41). */
+export type DifficultWord_Deserialize = {
+	/**  Mot (clé en minuscules). */
+	word: string,
+	/**  Dernières formes fautives distinctes, la plus récente d'abord. */
+	typedForms: string[],
+	/**  Type de faute le plus fréquent. */
+	dominantError?: ErrorType | null,
+	/**  Nombre d'erreurs. */
+	errors: number,
+	/**  Nombre de rencontres. */
+	encounters: number,
+	/**  Sessions réussies d'affilée (sur 3 pour la maîtrise). */
+	streak: number,
+	/**  Dernière faute, en ms Unix. */
+	lastErrorAt?: number | null,
+	/**  Prochaine révision, en ms Unix. */
+	nextReviewAt?: number | null,
+};
+
+/**  Ligne du tableau « Mots difficiles » (F-41). */
+export type DifficultWord_Serialize = {
+	/**  Mot (clé en minuscules). */
+	word: string,
+	/**  Dernières formes fautives distinctes, la plus récente d'abord. */
+	typedForms: string[],
+	/**  Type de faute le plus fréquent. */
+	dominantError: ErrorType | null,
+	/**  Nombre d'erreurs. */
+	errors: number,
+	/**  Nombre de rencontres. */
+	encounters: number,
+	/**  Sessions réussies d'affilée (sur 3 pour la maîtrise). */
+	streak: number,
+	/**  Dernière faute, en ms Unix. */
+	lastErrorAt: number | null,
+	/**  Prochaine révision, en ms Unix. */
+	nextReviewAt: number | null,
+};
 
 /**  Événement métier émis par un module. */
 export type DomainEvent = DomainEvent_Serialize | DomainEvent_Deserialize;
@@ -496,6 +555,57 @@ export type Profile = {
 	keyboardLayout: string,
 	/**  Date de création, en ms Unix. */
 	createdAt: number,
+};
+
+/**  Forme d'exercice demandée par l'interface. */
+export type ReviewExerciseKind = 
+/**  Chaque mot une fois, dans un ordre mélangé. */
+{ type: "shuffled" } | 
+/**  Chaque mot répété `times` fois de suite. */
+{ type: "repeated"; 
+/**  Répétitions de chaque mot (1 à `MAX_REPEAT`). */
+times: number } | 
+/**  Phrases de la bibliothèque qui contiennent ces mots. */
+{ type: "sentences" };
+
+/**  Vue d'ensemble de la révision : carte de l'accueil et badge du menu (F-43). */
+export type ReviewOverview = {
+	/**  Mots à réviser aujourd'hui, du plus en retard au plus récent. */
+	due: string[],
+	/**  Mots en révision, dus ou non. */
+	tracked: number,
+	/**  Mots maîtrisés (automatiquement ou à la main). */
+	mastered: number,
+};
+
+/**
+ *  Réglages du module Révision, rangés sous la clé `review` de `profiles.settings`
+ *  (ADR 0010).
+ */
+export type ReviewSettings = ReviewSettings_Serialize | ReviewSettings_Deserialize;
+
+/**
+ *  Réglages du module Révision, rangés sous la clé `review` de `profiles.settings`
+ *  (ADR 0010).
+ */
+export type ReviewSettings_Deserialize = {
+	/**
+	 *  Un mot tapé plus de `slow_factor` fois plus lentement que la moyenne de la
+	 *  session devient difficile (F-40).
+	 */
+	slowFactor?: number | null,
+};
+
+/**
+ *  Réglages du module Révision, rangés sous la clé `review` de `profiles.settings`
+ *  (ADR 0010).
+ */
+export type ReviewSettings_Serialize = {
+	/**
+	 *  Un mot tapé plus de `slow_factor` fois plus lentement que la moyenne de la
+	 *  session devient difficile (F-40).
+	 */
+	slowFactor: number | null,
 };
 
 /**  Découpage d'un texte en exercices. */

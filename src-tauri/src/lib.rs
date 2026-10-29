@@ -52,6 +52,8 @@ pub fn run() {
             // Bus d'événements ; l'interface y est abonnée via le relais.
             let bus = Arc::new(EventBus::new());
             bus.subscribe(Arc::new(FrontendForwarder::new(app.handle().clone())));
+            // Les modules métier (révision…) s'abonnent à leur tour.
+            commands::subscribe_modules(&bus, &pool);
 
             // État accessible à toutes les commandes.
             app.manage(AppState::new(pool, bus, profile.id));

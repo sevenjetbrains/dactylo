@@ -119,6 +119,18 @@ impl WordRecord {
         self.is_tracked() && self.next_review_at.is_some_and(|at| at < before_ms)
     }
 
+    /// Remet le mot en révision tout de suite (ajout manuel, F-45), en gardant ses
+    /// compteurs. Un mot qui n'était pas en révision repart de zéro : série et
+    /// planificateur neufs.
+    pub fn track_now(&mut self, now_ms: i64) {
+        if !self.is_tracked() {
+            self.streak = 0;
+            self.srs = SrsState::default();
+        }
+        self.mastery = Mastery::Learning;
+        self.next_review_at = Some(now_ms);
+    }
+
     /// Marque le mot maîtrisé à la main (F-45) : il sort de la révision.
     pub fn mark_mastered(&mut self) {
         self.mastery = Mastery::ManualMastered;
@@ -317,6 +329,26 @@ mod tests {
         assert_eq!(r.mastery, Mastery::ManualMastered);
         assert_eq!(r.next_review_at, None);
         assert_eq!(r.errors, 2);
+    }
+
+    /// Un mot maîtrisé ajouté à la main revient en révision, compteurs gardés.
+    #[test]
+    fn track_now_brings_mastered_word_back() {
+        let mut r = WordRecord::new("fête");
+        play(&mut r, false, false, 0);
+        r.mark_mastered();
+        r.track_now(T0 + 5);
+        assert!(r.is_due(T0 + 6));
+        assert_eq!(r.mastery, Mastery::Learning);
+        assert_eq!(r.errors, 1);
+        assert_eq!(r.srs, SrsState::default());
+        // Déjà en révision : la série est gardée, seule la date change.
+        let mut tracked = WordRecord::new("fête");
+        play(&mut tracked, false, false, 0);
+        play(&mut tracked, true, false, 1);
+        tracked.track_now(T0);
+        assert_eq!(tracked.streak, 1);
+        assert_eq!(tracked.next_review_at, Some(T0));
     }
 
     /// Un mot ajouté à la main est à réviser tout de suite.
