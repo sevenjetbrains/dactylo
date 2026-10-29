@@ -1,4 +1,12 @@
-//! Statistiques de session : MPM, CPM, précision (formules : ADR 0009).
+//! Statistiques de session : MPM, CPM, précision (formules : ADR 0009), et
+//! agrégats sur l'historique : tableau de bord, clavier, export (ADR 0017).
+
+/// Export des sessions en CSV (F-35).
+pub mod csv;
+/// Tableau de bord : progression, temps, record, série (F-33).
+pub mod dashboard;
+/// Carte de chaleur du clavier et bigrammes lents (F-34).
+pub mod keys;
 
 use serde::{Deserialize, Serialize};
 
