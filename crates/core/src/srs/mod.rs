@@ -3,6 +3,8 @@
 //! `Sm2` est l'implémentation actuelle ; FSRS pourra la remplacer sans toucher
 //! au suivi des mots (`words`).
 
+/// Exercices générés à partir des mots à réviser (F-44).
+pub mod exercises;
 /// Suivi des mots difficiles : rencontres, erreurs, maîtrise, prochaine révision.
 pub mod words;
 
