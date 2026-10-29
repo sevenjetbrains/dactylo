@@ -24,6 +24,8 @@ import { activeMs, usePracticeStore } from './store';
 import { FALLBACK_COLUMNS } from './layout';
 import { TypingArea } from './TypingArea';
 import { useKeystrokeSync, waitForSync } from './use-keystroke-sync';
+import { playKeySound } from './sounds';
+import { VirtualKeyboard } from './VirtualKeyboard';
 
 /** Ce que la page affiche : chargement, offre de reprise, bibliothèque vide, erreur, frappe ou résumé. */
 type Phase =
@@ -204,9 +206,16 @@ export default function PracticePage() {
     })();
   }, [status, sessionId, flush]);
 
-  /** Transmet une frappe au store, horodatée. */
+  /** Transmet une frappe au store, horodatée ; son de frappe si réglé (F-51). */
   const onKey = useCallback((key: RawKey) => {
-    usePracticeStore.getState().input(key, performance.now());
+    const store = usePracticeStore.getState();
+    const before = store.engine?.counters();
+    store.input(key, performance.now());
+    const after = usePracticeStore.getState().engine?.counters();
+    // Une insertion acceptée : juste si le nombre d'insertions justes a augmenté.
+    if (store.session?.settings.typingSounds && before && after && after.inserts > before.inserts) {
+      playKeySound(after.correctInserts > before.correctInserts);
+    }
   }, []);
 
   /**
@@ -470,6 +479,10 @@ export default function PracticePage() {
               })}
             </p>
           </div>
+          {/* Clavier virtuel : touche suivante et doigt conseillé (F-08). */}
+          {session.settings.showKeyboard && (
+            <VirtualKeyboard text={engine.text} position={engine.position} />
+          )}
           {status === 'paused' && (
             <p role="status" className="text-center font-medium">
               {t('paused')}

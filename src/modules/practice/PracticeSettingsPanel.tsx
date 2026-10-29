@@ -123,9 +123,17 @@ export default function PracticeSettingsPanel() {
           </label>
         ))}
       </fieldset>
-      {/* Options à cocher : retour arrière, bandeau, tolérance typographique. */}
+      {/* Options à cocher : retour arrière, bandeau, tolérance, clavier virtuel, sons. */}
       <div className="flex flex-col gap-2 text-sm">
-        {(['backspaceAllowed', 'showBanner', 'lenientPunctuation'] as const).map((key) => (
+        {(
+          [
+            'backspaceAllowed',
+            'showBanner',
+            'lenientPunctuation',
+            'showKeyboard',
+            'typingSounds',
+          ] as const
+        ).map((key) => (
           <label key={key} className="flex items-center gap-2">
             <input
               type="checkbox"

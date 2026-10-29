@@ -83,7 +83,9 @@
     "minutes": "Duration",
     "minutesValue_one": "{{count}} minute",
     "minutesValue_other": "{{count}} minutes",
-    "wordCount": "Word count"
+    "wordCount": "Word count",
+    "showKeyboard": "Show the on-screen keyboard (key and finger to use)",
+    "typingSounds": "Typing sounds"
   },
   "shortcutHints": {
     "pause": "pause",
@@ -111,5 +113,24 @@
     "free": "Free",
     "blocking": "Blocking"
   },
-  "exercise": "Exercise {{current}} of {{count}}"
+  "exercise": "Exercise {{current}} of {{count}}",
+  "keyboard": {
+    "next": "Next key: {{keys}} — {{finger}}",
+    "then": " then ",
+    "withShift": "with Shift",
+    "withAltGr": "with AltGr",
+    "withCaps": "caps lock",
+    "fingers": {
+      "leftPinky": "left little finger",
+      "leftRing": "left ring finger",
+      "leftMiddle": "left middle finger",
+      "leftIndex": "left index finger",
+      "leftThumb": "thumb",
+      "rightThumb": "right thumb",
+      "rightIndex": "right index finger",
+      "rightMiddle": "right middle finger",
+      "rightRing": "right ring finger",
+      "rightPinky": "right little finger"
+    }
+  }
 }

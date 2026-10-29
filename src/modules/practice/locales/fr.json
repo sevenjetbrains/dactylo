@@ -83,7 +83,9 @@
     "minutes": "Durée",
     "minutesValue_one": "{{count}} minute",
     "minutesValue_other": "{{count}} minutes",
-    "wordCount": "Nombre de mots"
+    "wordCount": "Nombre de mots",
+    "showKeyboard": "Afficher le clavier virtuel (touche et doigt conseillé)",
+    "typingSounds": "Sons de frappe"
   },
   "shortcutHints": {
     "pause": "pause",
@@ -111,5 +113,24 @@
     "free": "Libre",
     "blocking": "Bloquante"
   },
-  "exercise": "Exercice {{current}} sur {{count}}"
+  "exercise": "Exercice {{current}} sur {{count}}",
+  "keyboard": {
+    "next": "Touche suivante : {{keys}} — {{finger}}",
+    "then": " puis ",
+    "withShift": "avec Maj",
+    "withAltGr": "avec AltGr",
+    "withCaps": "majuscules verrouillées",
+    "fingers": {
+      "leftPinky": "auriculaire gauche",
+      "leftRing": "annulaire gauche",
+      "leftMiddle": "majeur gauche",
+      "leftIndex": "index gauche",
+      "leftThumb": "pouce",
+      "rightThumb": "pouce droit",
+      "rightIndex": "index droit",
+      "rightMiddle": "majeur droit",
+      "rightRing": "annulaire droit",
+      "rightPinky": "auriculaire droit"
+    }
+  }
 }
