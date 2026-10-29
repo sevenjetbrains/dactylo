@@ -20,9 +20,10 @@ use std::sync::Arc;
 
 use dactylo_core::events::EventBus;
 use tauri::Manager;
+use tauri_plugin_updater::UpdaterExt;
 use tauri_specta::Event;
 
-use crate::events::{FrontendForwarder, SpeechFinished};
+use crate::events::{FrontendForwarder, SpeechFinished, UpdateAvailable};
 use crate::speech::{TtsEngine, UnavailableEngine};
 use crate::state::AppState;
 
@@ -41,6 +42,9 @@ pub fn run() {
     tauri::Builder::default()
         // Boîte de dialogue du système : seul accès aux fichiers (NF-11, F-52).
         .plugin(tauri_plugin_dialog::init())
+        // Mises à jour et redémarrage : utilisés seulement à la demande (ADR 0025).
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             // Branche les événements typés sur l'application.
@@ -73,6 +77,23 @@ pub fn run() {
                     Ok(engine) => Arc::new(engine),
                     Err(e) => Arc::new(UnavailableEngine(e.0)),
                 };
+
+            // Vérification des mises à jour au démarrage, seulement si l'utilisateur l'a
+            // demandée : aucune requête réseau sinon (opt-in, ADR 0025).
+            if tauri::async_runtime::block_on(db::profiles::check_updates_on_start(&pool))? {
+                let handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    // Une erreur réseau ne doit rien bloquer : on réessaiera au prochain lancement.
+                    if let Ok(updater) = handle.updater()
+                        && let Ok(Some(update)) = updater.check().await
+                    {
+                        let _ = UpdateAvailable {
+                            version: update.version,
+                        }
+                        .emit(&handle);
+                    }
+                });
+            }
 
             // État accessible à toutes les commandes.
             app.manage(

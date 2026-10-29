@@ -8,7 +8,7 @@ use std::path::Path;
 
 use tauri::{AppHandle, State};
 
-use crate::db::backup;
+use crate::db::{backup, profiles};
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
 
@@ -46,6 +46,21 @@ pub async fn restore_database(
     // La base en cours est fermée proprement avant le redémarrage.
     state.pool.close().await;
     app.restart()
+}
+
+/// Commande : faut-il vérifier les mises à jour au démarrage ? (opt-in, ADR 0025)
+#[tauri::command]
+#[specta::specta]
+pub async fn get_update_check(state: State<'_, AppState>) -> AppResult<bool> {
+    profiles::check_updates_on_start(&state.pool).await
+}
+
+/// Commande : active ou coupe la vérification des mises à jour au démarrage.
+#[tauri::command]
+#[specta::specta]
+pub async fn save_update_check(state: State<'_, AppState>, enabled: bool) -> AppResult<bool> {
+    profiles::set_check_updates_on_start(&state.pool, enabled).await?;
+    Ok(enabled)
 }
 
 /// Tests des commandes système, sur une base fichier : `VACUUM INTO` depuis une base
@@ -91,5 +106,21 @@ mod tests {
         let state = state.with_db_path(dir.path().join("dactylo.db"));
         stage(&state, file.to_str().unwrap()).await.unwrap();
         assert!(dir.path().join("dactylo.db.restore").exists());
+    }
+
+    /// Mises à jour : rien par défaut (opt-in), puis le choix est retenu.
+    #[tokio::test]
+    async fn update_check_is_opt_in() {
+        let dir = tempfile::tempdir().unwrap();
+        let state = file_state(dir.path()).await;
+        assert!(!profiles::check_updates_on_start(&state.pool).await.unwrap());
+        profiles::set_check_updates_on_start(&state.pool, true)
+            .await
+            .unwrap();
+        assert!(profiles::check_updates_on_start(&state.pool).await.unwrap());
+        profiles::set_check_updates_on_start(&state.pool, false)
+            .await
+            .unwrap();
+        assert!(!profiles::check_updates_on_start(&state.pool).await.unwrap());
     }
 }

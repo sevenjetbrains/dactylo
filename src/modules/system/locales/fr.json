@@ -8,5 +8,19 @@
   "confirmRestore": "Les données actuelles seront remplacées par celles de la sauvegarde (elles restent gardées à côté), puis Dactylo redémarrera.",
   "chooseFile": "Choisir la sauvegarde",
   "cancel": "Annuler",
-  "restoring": "Restauration… Dactylo va redémarrer."
+  "restoring": "Restauration… Dactylo va redémarrer.",
+  "updates": {
+    "title": "Mises à jour",
+    "privacy": "Dactylo ne se connecte à Internet que pour chercher une nouvelle version, et seulement si vous le demandez. Aucune donnée n'est envoyée.",
+    "onStart": "Vérifier les mises à jour au démarrage",
+    "checkNow": "Vérifier maintenant",
+    "checking": "Recherche d'une nouvelle version…",
+    "upToDate": "Dactylo est à jour.",
+    "available": "La version {{version}} est disponible.",
+    "install": "Installer la version {{version}} et redémarrer",
+    "installing": "Téléchargement et installation…",
+    "failed": "Vérification impossible : {{message}}",
+    "banner": "La version {{version}} de Dactylo est disponible.",
+    "bannerAction": "Voir dans Réglages"
+  }
 }

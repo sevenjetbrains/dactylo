@@ -12,6 +12,7 @@
   - normalisation des espaces et des apostrophes.
 
   La commande `preview_pdf` ne stocke rien. Elle renvoie les lignes numérotées et le texte nettoyé.
+
 - L'interface envoie les pages de la plage **et jusqu'à deux pages voisines de chaque côté**. Un en-tête de page paire n'apparaît qu'une fois sur les pages 3 à 5 : les voisines permettent de le reconnaître. Est retenue comme en-tête une première ou dernière ligne qui se répète, chiffres ignorés, sur au moins deux pages et sur au moins la moitié des pages fournies.
 - Un numéro de page fait au plus trois chiffres : une ligne « 1872 » est plus probablement une année.
 - Le texte nettoyé est modifiable avant l'enregistrement (F-22). La commande `import_pdf` reçoit le texte final, qu'elle normalise de nouveau, ainsi que le fichier et la plage, rangés dans `texts.source_file` et `texts.pages`.

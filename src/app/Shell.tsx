@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, NavLink, Outlet } from 'react-router';
 
-import { commands, unwrap, type Profile } from '@/shared/api';
+import { commands, events, unwrap, type Profile } from '@/shared/api';
 import { cn } from '@/shared/lib/utils';
 
 import { buildMenu, type MenuEntry } from './menu';
@@ -30,6 +30,28 @@ export function Shell({ modules }: { modules: readonly ModuleManifest[] }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [open, setOpen] = useState(false);
+  const [update, setUpdate] = useState<string | null>(null);
+
+  // Nouvelle version annoncée par la vérification au démarrage (opt-in, ADR 0025).
+  useEffect(() => {
+    let active = true;
+    let stop: (() => void) | null = null;
+    try {
+      events.updateAvailable
+        .listen((e) => setUpdate(e.payload.version))
+        .then((s) => {
+          if (active) stop = s;
+          else s();
+        })
+        .catch(() => undefined);
+    } catch {
+      // Pas de runtime Tauri : aucune annonce.
+    }
+    return () => {
+      active = false;
+      stop?.();
+    };
+  }, []);
 
   // Profil actif, affiché en bas du menu ; une erreur laisse simplement l'emplacement vide.
   useEffect(() => {
@@ -158,6 +180,17 @@ export function Shell({ modules }: { modules: readonly ModuleManifest[] }) {
         )}
       </nav>
       <main className="flex-1 overflow-auto px-12 py-10">
+        {update && (
+          <p
+            role="status"
+            className="mx-auto mb-6 flex max-w-6xl flex-wrap items-center justify-between gap-3 rounded-xl bg-primary/10 px-4 py-3 text-sm"
+          >
+            {t('common:update.banner', { version: update })}
+            <Link to="/settings" className="font-semibold text-primary underline">
+              {t('common:update.action')}
+            </Link>
+          </p>
+        )}
         {/* Les pages sont chargées à la demande : message d'attente entre-temps. */}
         <Suspense fallback={<p>{t('common:loading')}</p>}>
           <Outlet />

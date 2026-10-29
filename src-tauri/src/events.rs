@@ -19,6 +19,14 @@ pub struct SpeechFinished {
     pub utterance: u64,
 }
 
+/// Nouvelle version trouvée par la vérification au démarrage (opt-in, ADR 0025).
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, tauri_specta::Event)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateAvailable {
+    /// Version disponible.
+    pub version: String,
+}
+
 /// Abonné du bus qui retransmet chaque événement à la fenêtre.
 pub struct FrontendForwarder<R: Runtime> {
     /// Application Tauri vers laquelle émettre.

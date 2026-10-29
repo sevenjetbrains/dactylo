@@ -1,13 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Permissions minimales de la fenêtre principale (NF-11) : aucun accès réseau ; fichiers uniquement par la boîte de dialogue (enregistrer, ouvrir).",
-  "windows": [
-    "main"
-  ],
+  "description": "Permissions minimales de la fenêtre principale (NF-11) : fichiers uniquement par la boîte de dialogue (enregistrer, ouvrir) ; réseau seulement pour les mises à jour, en opt-in (ADR 0025).",
+  "windows": ["main"],
   "permissions": [
     "core:default",
     "dialog:allow-save",
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "updater:default",
+    "process:allow-restart"
   ]
 }

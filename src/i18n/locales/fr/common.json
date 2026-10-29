@@ -13,5 +13,9 @@
     "switch": "Changer de profil",
     "manage": "Gérer les profils…",
     "switchFrom": "Profil {{name}} : changer de profil"
+  },
+  "update": {
+    "banner": "La version {{version}} de Dactylo est disponible.",
+    "action": "Voir dans Réglages"
   }
 }

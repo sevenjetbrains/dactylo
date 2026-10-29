@@ -14,6 +14,12 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
+    # Chaque signature s'active d'elle-même dès que ses secrets existent (ADR 0026) ;
+    # sans eux, les installeurs sortent non signés.
+    env:
+      HAS_WINDOWS_CERT: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
+      HAS_APPLE_CERT: ${{ secrets.APPLE_CERTIFICATE != '' }}
+      HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
     steps:
       - uses: actions/checkout@v4
       - if: runner.os == 'Linux'
@@ -28,11 +34,75 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Installeurs non signés pour l'instant ; la signature arrive en Phase 5.
+
+      # Mises à jour (ADR 0025) : artefacts signés et latest.json, si la clé est fournie.
+      - name: Artefacts de mise à jour
+        if: env.HAS_UPDATER_KEY == 'true'
+        shell: bash
+        # Secrets passés par l'environnement de l'étape, jamais insérés dans le script.
+        env:
+          KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          echo '{"bundle":{"createUpdaterArtifacts":true}}' > "$RUNNER_TEMP/updater.json"
+          echo "TAURI_ARGS=$TAURI_ARGS --config $RUNNER_TEMP/updater.json" >> "$GITHUB_ENV"
+          {
+            echo "TAURI_SIGNING_PRIVATE_KEY<<EOF"
+            echo "$KEY"
+            echo "EOF"
+            echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+      # Windows : certificat Authenticode (PFX en base64) importé, puis son empreinte
+      # donnée à Tauri, avec horodatage pour que la signature survive au certificat.
+      - name: Certificat Windows
+        if: runner.os == 'Windows' && env.HAS_WINDOWS_CERT == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP 'certificat.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $password = ConvertTo-SecureString $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password
+          Remove-Item $pfx
+          $sign = @{ bundle = @{ windows = @{
+            certificateThumbprint = $cert.Thumbprint
+            digestAlgorithm = 'sha256'
+            timestampUrl = 'http://timestamp.digicert.com'
+          } } } | ConvertTo-Json -Depth 5
+          $file = Join-Path $env:RUNNER_TEMP 'windows-sign.json'
+          Set-Content -Path $file -Value $sign -Encoding utf8
+          "TAURI_ARGS=$env:TAURI_ARGS --config $file" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      # macOS : signature et notarisation, variables lues par Tauri seulement si présentes.
+      - name: Certificat Apple
+        if: runner.os == 'macOS' && env.HAS_APPLE_CERT == 'true'
+        shell: bash
+        env:
+          CERT: ${{ secrets.APPLE_CERTIFICATE }}
+          CERT_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          ID: ${{ secrets.APPLE_ID }}
+          PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          {
+            echo "APPLE_CERTIFICATE=$CERT"
+            echo "APPLE_CERTIFICATE_PASSWORD=$CERT_PASSWORD"
+            echo "APPLE_SIGNING_IDENTITY=$IDENTITY"
+            echo "APPLE_ID=$ID"
+            echo "APPLE_PASSWORD=$PASSWORD"
+            echo "APPLE_TEAM_ID=$TEAM"
+          } >> "$GITHUB_ENV"
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: Dactylo ${{ github.ref_name }}
+          releaseBody: Voir les notes de version ci-dessous.
           releaseDraft: true
+          args: ${{ env.TAURI_ARGS }}

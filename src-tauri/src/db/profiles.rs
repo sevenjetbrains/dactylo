@@ -137,6 +137,29 @@ pub async fn delete(pool: &SqlitePool, id: &str) -> AppResult<()> {
     Ok(())
 }
 
+/// Clé de `app_meta` du réglage « vérifier les mises à jour au démarrage » (ADR 0025).
+const UPDATES_KEY: &str = "check_updates_on_start";
+
+/// Vérifier les mises à jour au démarrage ? Faux tant que l'utilisateur ne l'a pas
+/// demandé (opt-in, ADR 0025).
+pub async fn check_updates_on_start(pool: &SqlitePool) -> AppResult<bool> {
+    let value: Option<String> = sqlx::query_scalar("SELECT value FROM app_meta WHERE key = ?")
+        .bind(UPDATES_KEY)
+        .fetch_optional(pool)
+        .await?;
+    Ok(value.as_deref() == Some("1"))
+}
+
+/// Enregistre le réglage de vérification des mises à jour.
+pub async fn set_check_updates_on_start(pool: &SqlitePool, enabled: bool) -> AppResult<()> {
+    sqlx::query("INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)")
+        .bind(UPDATES_KEY)
+        .bind(if enabled { "1" } else { "0" })
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
 /// Retient le profil actif pour le prochain démarrage.
 pub async fn remember_active(pool: &SqlitePool, id: &str) -> AppResult<()> {
     sqlx::query("INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)")

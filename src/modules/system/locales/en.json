@@ -8,5 +8,19 @@
   "confirmRestore": "Your current data will be replaced by the backup (it is kept alongside), then Dactylo will restart.",
   "chooseFile": "Choose the backup",
   "cancel": "Cancel",
-  "restoring": "Restoring… Dactylo will restart."
+  "restoring": "Restoring… Dactylo will restart.",
+  "updates": {
+    "title": "Updates",
+    "privacy": "Dactylo only connects to the Internet to look for a new version, and only when you ask it to. No data is sent.",
+    "onStart": "Check for updates at startup",
+    "checkNow": "Check now",
+    "checking": "Looking for a new version…",
+    "upToDate": "Dactylo is up to date.",
+    "available": "Version {{version}} is available.",
+    "install": "Install version {{version}} and restart",
+    "installing": "Downloading and installing…",
+    "failed": "Could not check: {{message}}",
+    "banner": "Dactylo version {{version}} is available.",
+    "bannerAction": "See Settings"
+  }
 }

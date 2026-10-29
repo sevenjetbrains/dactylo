@@ -11,16 +11,17 @@ F-16 demande un alignement mot à mot du texte tapé sur le texte attendu, par d
 - **Jetons** : les mots de `text::word_spans` et les signes de ponctuation isolés. Le trait d'union interne fait partie du mot ; l'apostrophe sépare (« d'environ » → « d », « ' », « environ »). Les espaces ne sont pas des jetons. Chacun retient seulement s'il était précédé d'une espace, pour l'affichage.
 - **Alignement** : distance d'édition sur les jetons (`dictation::correct`), avec ces coûts :
 
-  | Opération | Coût |
-  | --- | --- |
-  | Jeton identique (tolérance typographique au choix) | 0 |
-  | Mot à une faute près, ou ponctuation remplacée | 1 |
-  | Mot sans rapport | 3 |
-  | Jeton oublié ou en trop | 2 |
-  | Fusion ou scission de 2 ou 3 mots dont les lettres coïncident, traits d'union mis à part | 1 |
-  | Mot face à ponctuation | interdit |
+  | Opération                                                                                | Coût     |
+  | ---------------------------------------------------------------------------------------- | -------- |
+  | Jeton identique (tolérance typographique au choix)                                       | 0        |
+  | Mot à une faute près, ou ponctuation remplacée                                           | 1        |
+  | Mot sans rapport                                                                         | 3        |
+  | Jeton oublié ou en trop                                                                  | 2        |
+  | Fusion ou scission de 2 ou 3 mots dont les lettres coïncident, traits d'union mis à part | 1        |
+  | Mot face à ponctuation                                                                   | interdit |
 
   À coût égal, l'appariement est préféré, puis la fusion ou la scission, puis l'oubli, puis l'ajout.
+
 - **Classement** d'un mot faux, dans cet ordre :
   1. majuscule (égal sans casse) ;
   2. accent (égal sans diacritiques) ;

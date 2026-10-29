@@ -132,12 +132,17 @@ export const commands = {
 	 *  l'installe avant d'ouvrir la base (F-52).
 	 */
 	restoreDatabase: (path: string) => typedError<null, ApiError>(__TAURI_INVOKE("restore_database", { path })),
+	/**  Commande : faut-il vérifier les mises à jour au démarrage ? (opt-in, ADR 0025) */
+	getUpdateCheck: () => typedError<boolean, ApiError>(__TAURI_INVOKE("get_update_check")),
+	/**  Commande : active ou coupe la vérification des mises à jour au démarrage. */
+	saveUpdateCheck: (enabled: boolean) => typedError<boolean, ApiError>(__TAURI_INVOKE("save_update_check", { enabled })),
 };
 
 /** Events */
 export const events = {
 	domainEventPayload: makeEvent<DomainEventPayload_Serialize, DomainEventPayload_Deserialize>("domain-event-payload"),
 	speechFinished: makeEvent<SpeechFinished, SpeechFinished>("speech-finished"),
+	updateAvailable: makeEvent<UpdateAvailable, UpdateAvailable>("update-available"),
 };
 
 /* Types */
@@ -1762,6 +1767,12 @@ export type TypingError = {
 	position: number,
 	/**  `true` pour un mot, `false` pour une espace ou une ponctuation isolée. */
 	word: boolean,
+};
+
+/**  Nouvelle version trouvée par la vérification au démarrage (opt-in, ADR 0025). */
+export type UpdateAvailable = {
+	/**  Version disponible. */
+	version: string,
 };
 
 /**  Une voix installée. */

@@ -13,5 +13,9 @@
     "switch": "Switch profile",
     "manage": "Manage profiles…",
     "switchFrom": "Profile {{name}}: switch profile"
+  },
+  "update": {
+    "banner": "Dactylo version {{version}} is available.",
+    "action": "See Settings"
   }
 }

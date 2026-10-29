@@ -28,7 +28,7 @@ use specta_typescript::Typescript;
 use sqlx::SqlitePool;
 use tauri_specta::{Builder, collect_commands, collect_events};
 
-use crate::events::{DomainEventPayload, SpeechFinished};
+use crate::events::{DomainEventPayload, SpeechFinished, UpdateAvailable};
 
 /// Chemin du client typé généré, résolu depuis le dossier `src-tauri/`.
 pub const BINDINGS_PATH: &str =
@@ -96,8 +96,14 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             stats::export_sessions_csv,
             system::backup_database,
             system::restore_database,
+            system::get_update_check,
+            system::save_update_check,
         ])
-        .events(collect_events![DomainEventPayload, SpeechFinished])
+        .events(collect_events![
+            DomainEventPayload,
+            SpeechFinished,
+            UpdateAvailable
+        ])
         // Les i64 sont des horodatages en ms et des compteurs : très en deçà de 2^53.
         .dangerously_cast_bigints_to_number()
 }
