@@ -12,6 +12,8 @@ pub mod library;
 pub mod practice;
 /// Révision : mots difficiles, révision du jour, exercices générés.
 pub mod review;
+/// Statistiques : tableau de bord, clavier, sessions récentes, export.
+pub mod stats;
 
 use std::sync::Arc;
 
@@ -59,6 +61,10 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             review::remove_word,
             review::mark_word_mastered,
             review::review_exercise,
+            stats::stats_dashboard,
+            stats::key_report,
+            stats::recent_sessions,
+            stats::export_sessions_csv,
         ])
         .events(collect_events![DomainEventPayload])
         // Les i64 sont des horodatages en ms et des compteurs : très en deçà de 2^53.

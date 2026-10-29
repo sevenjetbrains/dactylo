@@ -6,6 +6,8 @@ pub mod builtin;
 pub mod profiles;
 /// Sessions, frappes et fautes.
 pub mod sessions;
+/// Lectures pour les statistiques.
+pub mod stats;
 /// Textes de la bibliothèque.
 pub mod texts;
 /// Mots suivis et leurs tentatives (F-40 à F-45).

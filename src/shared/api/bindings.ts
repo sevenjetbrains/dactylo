@@ -68,6 +68,14 @@ export const commands = {
 	markWordMastered: (word: string) => typedError<null, ApiError>(__TAURI_INVOKE("mark_word_mastered", { word })),
 	/**  Commande : texte d'un exercice de révision (F-44). */
 	reviewExercise: (kind: ReviewExerciseKind, tzOffsetMinutes: number) => typedError<string, ApiError>(__TAURI_INVOKE("review_exercise", { kind, tzOffsetMinutes })),
+	/**  Commande : tableau de bord sur la période (F-33). */
+	statsDashboard: (period: Period, tzOffsetMinutes: number) => typedError<Dashboard_Serialize, ApiError>(__TAURI_INVOKE("stats_dashboard", { period, tzOffsetMinutes })),
+	/**  Commande : carte de chaleur et bigrammes lents (F-34). */
+	keyReport: (period: Period, tzOffsetMinutes: number) => typedError<KeyReport_Serialize, ApiError>(__TAURI_INVOKE("key_report", { period, tzOffsetMinutes })),
+	/**  Commande : dernières sessions terminées (accueil). */
+	recentSessions: (limit: number) => typedError<RecentSession_Serialize[], ApiError>(__TAURI_INVOKE("recent_sessions", { limit })),
+	/**  Commande : export CSV des sessions de la période (F-35). */
+	exportSessionsCsv: (period: Period, tzOffsetMinutes: number, labels: CsvLabels) => typedError<string, ApiError>(__TAURI_INVOKE("export_sessions_csv", { period, tzOffsetMinutes, labels })),
 };
 
 /** Events */
@@ -82,6 +90,14 @@ export type ActiveLine =
 "top" | 
 /**  La ligne en cours reste au milieu de la zone. */
 "center";
+
+/**  Temps et nombre de sessions sur une période. */
+export type Activity = {
+	/**  Temps actif total, en ms. */
+	trainingMs: number,
+	/**  Sessions terminées. */
+	sessions: number,
+};
 
 /**  Forme sérialisée de `AppError`, décrite pour specta. */
 export type ApiError = {
@@ -109,6 +125,16 @@ export type AverageStats = {
 	cpm: number | null,
 	/**  Précision moyenne, en %. */
 	accuracy: number | null,
+};
+
+/**  Temps moyen d'un enchaînement de deux caractères. */
+export type BigramStat = {
+	/**  Les deux caractères, en minuscules. */
+	bigram: string,
+	/**  Nombre d'occurrences mesurées. */
+	count: number,
+	/**  Temps moyen du second caractère après le premier, en ms. */
+	avgMs: number | null,
 };
 
 /**  Étapes du nettoyage, toutes actives par défaut ; l'utilisateur peut en couper. */
@@ -148,6 +174,66 @@ export type CorrectionMode =
 "blocking" | 
 /**  On avance ; l'erreur reste comptée. */
 "free";
+
+/**  Libellés traduits de l'export CSV (NF-08) : l'interface les fournit. */
+export type CsvLabels = {
+	/**
+	 *  En-têtes des 10 colonnes : date, texte, mode, état, durée (s), MPM brut,
+	 *  MPM net, CPM, précision (%), erreurs.
+	 */
+	headers: string[],
+	/**  Libellé du mode copie. */
+	copy: string,
+	/**  Libellé du mode dictée. */
+	dictation: string,
+	/**  Libellé du mode révision. */
+	review: string,
+	/**  Libellé d'une session terminée. */
+	completed: string,
+	/**  Libellé d'une session abandonnée. */
+	abandoned: string,
+	/**  Virgule décimale (français) plutôt que point. */
+	decimalComma: boolean,
+};
+
+/**  Tableau de bord d'un profil. */
+export type Dashboard = Dashboard_Serialize | Dashboard_Deserialize;
+
+/**  Tableau de bord d'un profil. */
+export type Dashboard_Deserialize = {
+	/**  Sessions terminées de la période, dans l'ordre chronologique. */
+	points: ProgressPoint[],
+	/**  Temps et sessions de la période. */
+	period: Activity,
+	/**  Précision moyenne des sessions terminées de la période, en %. */
+	averageAccuracy?: number | null,
+	/**  Meilleur MPM net de tous les temps (record personnel). */
+	bestWpmNet?: number | null,
+	/**  Série de jours consécutifs. */
+	streak: Streak,
+	/**  Tendance des dernières sessions, toutes périodes confondues. */
+	trend: Trend_Deserialize,
+	/**  Semaine locale en cours (depuis lundi). */
+	week: Activity,
+};
+
+/**  Tableau de bord d'un profil. */
+export type Dashboard_Serialize = {
+	/**  Sessions terminées de la période, dans l'ordre chronologique. */
+	points: ProgressPoint[],
+	/**  Temps et sessions de la période. */
+	period: Activity,
+	/**  Précision moyenne des sessions terminées de la période, en %. */
+	averageAccuracy: number | null,
+	/**  Meilleur MPM net de tous les temps (record personnel). */
+	bestWpmNet: number | null,
+	/**  Série de jours consécutifs. */
+	streak: Streak,
+	/**  Tendance des dernières sessions, toutes périodes confondues. */
+	trend: Trend_Serialize,
+	/**  Semaine locale en cours (depuis lundi). */
+	week: Activity,
+};
 
 /**  Ligne du tableau « Mots difficiles » (F-41). */
 export type DifficultWord = DifficultWord_Serialize | DifficultWord_Deserialize;
@@ -314,6 +400,60 @@ export type KeyKind =
 "insert" | 
 /**  Retour arrière. */
 "delete";
+
+/**  Résultat de l'analyse des frappes. */
+export type KeyReport = KeyReport_Serialize | KeyReport_Deserialize;
+
+/**  Résultat de l'analyse des frappes. */
+export type KeyReport_Deserialize = {
+	/**  Une entrée par touche rencontrée, triée par touche. */
+	keys: KeyStat_Deserialize[],
+	/**  Bigrammes les plus lents, du plus lent au moins lent. */
+	slowBigrams: BigramStat[],
+	/**  Frappes fausses, toutes touches confondues. */
+	totalErrors: number,
+	/**  Frappes fausses sur un caractère accentué (part des accents, maquette). */
+	accentErrors: number,
+};
+
+/**  Résultat de l'analyse des frappes. */
+export type KeyReport_Serialize = {
+	/**  Une entrée par touche rencontrée, triée par touche. */
+	keys: KeyStat_Serialize[],
+	/**  Bigrammes les plus lents, du plus lent au moins lent. */
+	slowBigrams: BigramStat[],
+	/**  Frappes fausses, toutes touches confondues. */
+	totalErrors: number,
+	/**  Frappes fausses sur un caractère accentué (part des accents, maquette). */
+	accentErrors: number,
+};
+
+/**  Statistiques d'une touche. */
+export type KeyStat = KeyStat_Serialize | KeyStat_Deserialize;
+
+/**  Statistiques d'une touche. */
+export type KeyStat_Deserialize = {
+	/**  Touche, en minuscules (« a », « é », « ^ »…). */
+	key: string,
+	/**  Frappes attendues sur cette touche. */
+	presses: number,
+	/**  Frappes fausses. */
+	errors: number,
+	/**  Temps moyen d'une frappe juste, en ms, s'il a pu être mesuré. */
+	avgMs?: number | null,
+};
+
+/**  Statistiques d'une touche. */
+export type KeyStat_Serialize = {
+	/**  Touche, en minuscules (« a », « é », « ^ »…). */
+	key: string,
+	/**  Frappes attendues sur cette touche. */
+	presses: number,
+	/**  Frappes fausses. */
+	errors: number,
+	/**  Temps moyen d'une frappe juste, en ms, s'il a pu être mesuré. */
+	avgMs: number | null,
+};
 
 /**  Frappe brute envoyée par l'interface. */
 export type Keystroke = Keystroke_Serialize | Keystroke_Deserialize;
@@ -528,6 +668,15 @@ export type PendingSession_Serialize = {
 	startedAt: number,
 };
 
+/**  Période affichée par le tableau de bord. */
+export type Period = 
+/**  Les 7 derniers jours, aujourd'hui compris. */
+"week" | 
+/**  Les 30 derniers jours, aujourd'hui compris. */
+"month" | 
+/**  Depuis le début. */
+"all";
+
 /**  Réglages d'entraînement d'un profil. */
 export type PracticeSettings = PracticeSettings_Serialize | PracticeSettings_Deserialize;
 
@@ -581,6 +730,51 @@ export type Profile = {
 	keyboardLayout: string,
 	/**  Date de création, en ms Unix. */
 	createdAt: number,
+};
+
+/**  Point de la courbe de progression. */
+export type ProgressPoint = {
+	/**  Début de la session, en ms Unix. */
+	startedAt: number,
+	/**  MPM net. */
+	wpmNet: number | null,
+	/**  Précision, en %. */
+	accuracy: number | null,
+};
+
+/**  Ligne du tableau « Sessions récentes » de l'accueil. */
+export type RecentSession = RecentSession_Serialize | RecentSession_Deserialize;
+
+/**  Ligne du tableau « Sessions récentes » de l'accueil. */
+export type RecentSession_Deserialize = {
+	/**  Identifiant de la session. */
+	sessionId: string,
+	/**  Début, en ms Unix. */
+	startedAt: number,
+	/**  Titre du texte ; `None` pour une révision ou un texte supprimé. */
+	title?: string | null,
+	/**  Mode de la session. */
+	mode: TrainingMode,
+	/**  MPM net. */
+	wpmNet: number | null,
+	/**  Précision, en %. */
+	accuracy: number | null,
+};
+
+/**  Ligne du tableau « Sessions récentes » de l'accueil. */
+export type RecentSession_Serialize = {
+	/**  Identifiant de la session. */
+	sessionId: string,
+	/**  Début, en ms Unix. */
+	startedAt: number,
+	/**  Titre du texte ; `None` pour une révision ou un texte supprimé. */
+	title: string | null,
+	/**  Mode de la session. */
+	mode: TrainingMode,
+	/**  MPM net. */
+	wpmNet: number | null,
+	/**  Précision, en %. */
+	accuracy: number | null,
 };
 
 /**  Forme d'exercice demandée par l'interface. */
@@ -820,6 +1014,14 @@ export type SourceLine = {
 	text: string,
 };
 
+/**  Série de jours consécutifs d'entraînement. */
+export type Streak = {
+	/**  Série en cours : jusqu'à aujourd'hui, ou jusqu'à hier si rien encore aujourd'hui. */
+	current: number,
+	/**  Plus longue série. */
+	best: number,
+};
+
 /**  Texte complet, pour une session ou pour l'éditer. */
 export type TextContent = TextContent_Serialize | TextContent_Deserialize;
 
@@ -1007,6 +1209,42 @@ export type TextUpdate_Serialize = {
 	language: string,
 	/**  Découpage en exercices. */
 	segmentation: Segmentation,
+};
+
+/**  Mode d'une session ; valeurs identiques à la contrainte `sessions.mode`. */
+export type TrainingMode = 
+/**  Copie d'un texte. */
+"copy" | 
+/**  Dictée (Phase 4). */
+"dictation" | 
+/**  Révision des mots difficiles. */
+"review";
+
+/**  Moyenne des dernières sessions et écart avec les précédentes. */
+export type Trend = Trend_Serialize | Trend_Deserialize;
+
+/**  Moyenne des dernières sessions et écart avec les précédentes. */
+export type Trend_Deserialize = {
+	/**  MPM net moyen des `TREND_WINDOW` dernières sessions terminées. */
+	wpmNet?: number | null,
+	/**  Écart avec les `TREND_WINDOW` sessions d'avant, s'il y en a. */
+	wpmNetDelta?: number | null,
+	/**  Précision moyenne des dernières sessions, en %. */
+	accuracy?: number | null,
+	/**  Écart de précision, en points. */
+	accuracyDelta?: number | null,
+};
+
+/**  Moyenne des dernières sessions et écart avec les précédentes. */
+export type Trend_Serialize = {
+	/**  MPM net moyen des `TREND_WINDOW` dernières sessions terminées. */
+	wpmNet: number | null,
+	/**  Écart avec les `TREND_WINDOW` sessions d'avant, s'il y en a. */
+	wpmNetDelta: number | null,
+	/**  Précision moyenne des dernières sessions, en %. */
+	accuracy: number | null,
+	/**  Écart de précision, en points. */
+	accuracyDelta: number | null,
 };
 
 /**  Faute relevée dans une session. */
