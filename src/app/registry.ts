@@ -4,9 +4,11 @@ import { dictation } from '@/modules/dictation';
 import { home } from '@/modules/home';
 import { library } from '@/modules/library';
 import { practice } from '@/modules/practice';
+import { profiles } from '@/modules/profiles';
 import { review } from '@/modules/review';
 import { settings } from '@/modules/settings';
 import { stats } from '@/modules/stats';
+import { system } from '@/modules/system';
 
 import type { ModuleManifest } from './types';
 
@@ -22,4 +24,6 @@ export const modules: readonly ModuleManifest[] = [
   review,
   stats,
   settings,
+  profiles,
+  system,
 ];

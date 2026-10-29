@@ -1,0 +1,12 @@
+{
+  "title": "Données",
+  "intro": "Toutes vos données (profils, textes, statistiques, mots à réviser) tiennent dans un seul fichier, à garder en lieu sûr ou à copier sur un autre ordinateur.",
+  "filter": "Sauvegarde Dactylo",
+  "backup": "Sauvegarder…",
+  "saved": "Sauvegarde enregistrée : {{path}}",
+  "restore": "Restaurer…",
+  "confirmRestore": "Les données actuelles seront remplacées par celles de la sauvegarde (elles restent gardées à côté), puis Dactylo redémarrera.",
+  "chooseFile": "Choisir la sauvegarde",
+  "cancel": "Annuler",
+  "restoring": "Restauration… Dactylo va redémarrer."
+}

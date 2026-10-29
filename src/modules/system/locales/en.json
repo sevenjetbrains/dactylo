@@ -1,0 +1,12 @@
+{
+  "title": "Data",
+  "intro": "All your data (profiles, texts, statistics, words to review) fits in a single file, to keep somewhere safe or copy to another computer.",
+  "filter": "Dactylo backup",
+  "backup": "Back up…",
+  "saved": "Backup saved: {{path}}",
+  "restore": "Restore…",
+  "confirmRestore": "Your current data will be replaced by the backup (it is kept alongside), then Dactylo will restart.",
+  "chooseFile": "Choose the backup",
+  "cancel": "Cancel",
+  "restoring": "Restoring… Dactylo will restart."
+}

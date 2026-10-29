@@ -12,9 +12,12 @@ export function buildRoutes(modules: readonly ModuleManifest[]): RouteObject[] {
       path: '/',
       element: <Shell modules={modules} />,
       // Le chemin vide devient la route d'index (accueil).
-      children: modules.map(({ route: { path, component: Page } }) =>
-        path === '' ? { index: true, element: <Page /> } : { path, element: <Page /> },
-      ),
+      children: modules.flatMap(({ route }) => {
+        // Module sans page (panneau de réglages seul) : pas de route.
+        if (!route) return [];
+        const { path, component: Page } = route;
+        return [path === '' ? { index: true, element: <Page /> } : { path, element: <Page /> }];
+      }),
     },
   ];
 }

@@ -2,6 +2,7 @@
 import type { ApiError } from './bindings';
 
 export { commands, events } from './bindings';
+export { chooseOpenFile, chooseSaveFile, type FileFilter } from './files';
 export type * from './bindings';
 
 /** Forme des réponses des commandes faillibles (mode `Result` de tauri-specta). */

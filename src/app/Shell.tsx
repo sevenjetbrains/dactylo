@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { NavLink, Outlet } from 'react-router';
+import { Link, NavLink, Outlet } from 'react-router';
 
 import { commands, unwrap, type Profile } from '@/shared/api';
 import { cn } from '@/shared/lib/utils';
@@ -28,6 +28,8 @@ export function Shell({ modules }: { modules: readonly ModuleManifest[] }) {
   // Le menu ne dépend que du registre.
   const menu = useMemo(() => buildMenu(modules), [modules]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [open, setOpen] = useState(false);
 
   // Profil actif, affiché en bas du menu ; une erreur laisse simplement l'emplacement vide.
   useEffect(() => {
@@ -77,9 +79,66 @@ export function Shell({ modules }: { modules: readonly ModuleManifest[] }) {
             {useBadge && <MenuBadge useBadge={useBadge} />}
           </NavLink>
         ))}
-        {/* Profil actif, poussé en bas du menu. */}
+        {/* Profil actif, poussé en bas du menu ; un clic ouvre le changement de profil (F-50). */}
+        {profile && open && (
+          <div
+            role="menu"
+            aria-label={t('common:profile.switch')}
+            className="mt-auto flex flex-col gap-1 rounded-xl bg-sidebar-accent p-2 text-sm"
+          >
+            {profiles.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                role="menuitemradio"
+                aria-checked={p.id === profile.id}
+                onClick={() => {
+                  setOpen(false);
+                  if (p.id === profile.id) return;
+                  // Le nouveau profil est retenu, puis tout repart de l'accueil.
+                  void unwrap(commands.switchProfile(p.id)).then(() => {
+                    window.location.hash = '#/';
+                    window.location.reload();
+                  });
+                }}
+                className={cn(
+                  'rounded-lg px-3 py-2 text-left outline-none hover:bg-sidebar focus-visible:ring-2 focus-visible:ring-ring',
+                  p.id === profile.id && 'font-semibold',
+                )}
+              >
+                {p.name}
+              </button>
+            ))}
+            <Link
+              to="/settings"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="rounded-lg px-3 py-2 text-sidebar-muted outline-none hover:bg-sidebar focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {t('common:profile.manage')}
+            </Link>
+          </div>
+        )}
         {profile && (
-          <div className="mt-auto flex items-center gap-3 rounded-xl bg-sidebar-accent p-3">
+          <button
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded={open}
+            aria-label={t('common:profile.switchFrom', { name: profile.name })}
+            onClick={() => {
+              // La liste est relue à chaque ouverture : un profil a pu être créé.
+              if (!open) {
+                void unwrap(commands.listProfiles())
+                  .then(setProfiles)
+                  .catch(() => undefined);
+              }
+              setOpen((o) => !o);
+            }}
+            className={cn(
+              'flex items-center gap-3 rounded-xl bg-sidebar-accent p-3 text-left outline-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring',
+              !open && 'mt-auto',
+            )}
+          >
             <span
               aria-hidden
               className="grid size-10 shrink-0 place-items-center rounded-full bg-accent font-bold text-accent-foreground"
@@ -95,7 +154,7 @@ export function Shell({ modules }: { modules: readonly ModuleManifest[] }) {
                 })}
               </p>
             </div>
-          </div>
+          </button>
         )}
       </nav>
       <main className="flex-1 overflow-auto px-12 py-10">

@@ -8,6 +8,11 @@
       "light": "Light",
       "dark": "Dark",
       "system": "System"
+    },
+    "language": "Interface language",
+    "languages": {
+      "fr": "Français",
+      "en": "English"
     }
   }
 }

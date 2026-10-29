@@ -20,11 +20,11 @@ export interface MenuEntry {
 export function buildMenu(modules: readonly ModuleManifest[]): MenuEntry[] {
   // Garde les modules qui ont un menu, triés, puis les convertit en entrées.
   return modules
-    .flatMap((m) => (m.menu ? [{ module: m, menu: m.menu }] : []))
+    .flatMap((m) => (m.menu && m.route ? [{ module: m, menu: m.menu, route: m.route }] : []))
     .sort((a, b) => a.menu.order - b.menu.order)
-    .map(({ module, menu }) => ({
+    .map(({ module, menu, route }) => ({
       moduleId: module.id,
-      path: `/${module.route.path}`,
+      path: `/${route.path}`,
       labelKey: menu.labelKey,
       icon: menu.icon,
       useBadge: menu.useBadge,
@@ -38,8 +38,10 @@ export function assertValidRegistry(modules: readonly ModuleManifest[]): void {
   // Le premier doublon rencontré arrête tout.
   for (const m of modules) {
     if (ids.has(m.id)) throw new Error(`Module en double : ${m.id}`);
-    if (paths.has(m.route.path)) throw new Error(`Chemin en double : /${m.route.path}`);
+    if (m.route && paths.has(m.route.path)) {
+      throw new Error(`Chemin en double : /${m.route.path}`);
+    }
     ids.add(m.id);
-    paths.add(m.route.path);
+    if (m.route) paths.add(m.route.path);
   }
 }

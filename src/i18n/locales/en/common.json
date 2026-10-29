@@ -9,6 +9,9 @@
   },
   "languageName": "English",
   "profile": {
-    "details": "{{layout}} · {{language}}"
+    "details": "{{layout}} · {{language}}",
+    "switch": "Switch profile",
+    "manage": "Manage profiles…",
+    "switchFrom": "Profile {{name}}: switch profile"
   }
 }

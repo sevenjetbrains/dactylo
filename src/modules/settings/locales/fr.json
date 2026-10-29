@@ -8,6 +8,11 @@
       "light": "Clair",
       "dark": "Sombre",
       "system": "Selon le système"
+    },
+    "language": "Langue de l'interface",
+    "languages": {
+      "fr": "Français",
+      "en": "English"
     }
   }
 }

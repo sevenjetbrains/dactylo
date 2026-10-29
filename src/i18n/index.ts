@@ -12,6 +12,30 @@ import commonFr from './locales/fr/common.json';
 export const SUPPORTED_LANGUAGES = ['fr', 'en'] as const;
 /** Langue de l'interface par défaut. */
 export const DEFAULT_LANGUAGE = 'fr';
+/** Clé du stockage local qui retient la langue choisie (réglage de l'appareil). */
+const LANGUAGE_KEY = 'dactylo-language';
+
+/** Langue retenue, si elle est disponible ; sinon la langue par défaut. */
+export function storedLanguage(): string {
+  try {
+    const value = localStorage.getItem(LANGUAGE_KEY);
+    return SUPPORTED_LANGUAGES.find((l) => l === value) ?? DEFAULT_LANGUAGE;
+  } catch {
+    return DEFAULT_LANGUAGE;
+  }
+}
+
+/** Change la langue de l'interface et la retient (F-51). */
+export async function setLanguage(language: (typeof SUPPORTED_LANGUAGES)[number]) {
+  await i18n.changeLanguage(language);
+  try {
+    localStorage.setItem(LANGUAGE_KEY, language);
+  } catch {
+    // Stockage indisponible : la langue vaut pour cette ouverture seulement.
+  }
+  document.documentElement.lang = i18n.language;
+  document.documentElement.dir = i18n.dir();
+}
 
 /** Ressources : espace `common` + un espace par module, nommé par son `id`. */
 export function buildResources(modules: readonly ModuleManifest[]): Resource {
@@ -30,7 +54,7 @@ export function initI18n(modules: readonly ModuleManifest[]) {
   // Initialisation synchrone : les ressources sont embarquées (NF-03).
   void i18n.use(initReactI18next).init({
     resources: buildResources(modules),
-    lng: DEFAULT_LANGUAGE,
+    lng: storedLanguage(),
     fallbackLng: DEFAULT_LANGUAGE,
     defaultNS: 'common',
     interpolation: { escapeValue: false },

@@ -1,0 +1,22 @@
+{
+  "title": "Profiles",
+  "nameOf": "Name of the “{{name}}” profile",
+  "layoutOf": "Keyboard layout of “{{name}}”",
+  "layout": "Keyboard layout",
+  "layouts": {
+    "azerty": "AZERTY",
+    "qwerty": "QWERTY",
+    "bepo": "BÉPO"
+  },
+  "active": "Active profile",
+  "activate": "Use this profile",
+  "delete": "Delete",
+  "deleteNamed": "Delete the “{{name}}” profile",
+  "confirmDelete": "Delete “{{name}}” and all its statistics?",
+  "cancel": "Cancel",
+  "newName": "New profile",
+  "placeholder": "First name",
+  "create": "Create profile",
+  "switcher": "Switch profile",
+  "manage": "Manage profiles"
+}

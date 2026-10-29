@@ -13,8 +13,8 @@ export type ModuleLocales = Record<string, Record<string, unknown>>;
 export interface ModuleManifest {
   /** Identifiant unique, aussi utilisé comme espace de noms i18n. */
   id: string;
-  /** Route du module. */
-  route: {
+  /** Route du module ; absente pour un module qui n'a qu'un panneau de réglages. */
+  route?: {
     /** Chemin relatif à la racine ; '' pour l'accueil. */
     path: string;
     /** Page affichée. */

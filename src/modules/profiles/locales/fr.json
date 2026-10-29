@@ -1,0 +1,22 @@
+{
+  "title": "Profils",
+  "nameOf": "Nom du profil « {{name}} »",
+  "layoutOf": "Disposition clavier de « {{name}} »",
+  "layout": "Disposition clavier",
+  "layouts": {
+    "azerty": "AZERTY",
+    "qwerty": "QWERTY",
+    "bepo": "BÉPO"
+  },
+  "active": "Profil actif",
+  "activate": "Utiliser ce profil",
+  "delete": "Supprimer",
+  "deleteNamed": "Supprimer le profil « {{name}} »",
+  "confirmDelete": "Supprimer « {{name}} » et toutes ses statistiques ?",
+  "cancel": "Annuler",
+  "newName": "Nouveau profil",
+  "placeholder": "Prénom",
+  "create": "Créer le profil",
+  "switcher": "Changer de profil",
+  "manage": "Gérer les profils"
+}
