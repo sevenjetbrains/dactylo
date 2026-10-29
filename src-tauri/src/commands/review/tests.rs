@@ -269,6 +269,21 @@ async fn exercises_use_due_then_tracked_words() {
     assert_eq!(sentences, "Le vieillard dort.");
 }
 
+/// Exercice sur des mots donnés (après une dictée) : mots normalisés, intrus ignorés.
+#[tokio::test]
+async fn exercise_on_given_words() {
+    let (state, _) = test_support::state().await;
+    let words = vec![
+        "Digne".to_owned(),
+        "deux mots".to_owned(),
+        "digne".to_owned(),
+    ];
+    let content = exercise_for_words(&state, &words, ReviewExerciseKind::Repeated { times: 2 })
+        .await
+        .unwrap();
+    assert_eq!(content, "digne digne");
+}
+
 /// Sans mot dû aujourd'hui, l'exercice prend les prochains mots à réviser.
 #[tokio::test]
 async fn exercise_falls_back_to_upcoming_words() {

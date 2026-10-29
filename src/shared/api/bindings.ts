@@ -11,6 +11,36 @@ export const commands = {
 	appInfo: () => __TAURI_INVOKE<AppInfo>("app_info"),
 	/**  Renvoie le profil actif. */
 	currentProfile: () => typedError<Profile, ApiError>(__TAURI_INVOKE("current_profile")),
+	/**  Commande : voix installées (F-12). */
+	listVoices: () => typedError<Voice[], ApiError>(__TAURI_INVOKE("list_voices")),
+	/**  Commande : réglages de dictée du profil. */
+	getDictationSettings: () => typedError<DictationSettings_Serialize, ApiError>(__TAURI_INVOKE("get_dictation_settings")),
+	/**  Commande : enregistre les réglages de dictée du profil. */
+	saveDictationSettings: (settings: DictationSettings_Deserialize) => typedError<DictationSettings_Serialize, ApiError>(__TAURI_INVOKE("save_dictation_settings", { settings })),
+	/**  Commande : profils de dictée enregistrés (F-17). */
+	listDictationProfiles: () => typedError<DictationProfile_Serialize[], ApiError>(__TAURI_INVOKE("list_dictation_profiles")),
+	/**  Commande : crée (sans `id`) ou remplace un profil de dictée (F-17). */
+	saveDictationProfile: (id: string | null, name: string, settings: DictationSettings_Deserialize) => typedError<DictationProfile_Serialize, ApiError>(__TAURI_INVOKE("save_dictation_profile", { id, name, settings })),
+	/**  Commande : supprime un profil de dictée (F-17). */
+	deleteDictationProfile: (id: string) => typedError<null, ApiError>(__TAURI_INVOKE("delete_dictation_profile", { id })),
+	/**  Commande : démarre une dictée. */
+	startDictation: (textId: string | null, exercise: number | null) => typedError<DictationStart_Serialize, ApiError>(__TAURI_INVOKE("start_dictation", { textId, exercise })),
+	/**  Commande : lit un segment, en répétition ou non (F-10, F-14). */
+	speakDictationSegment: (sessionId: string, index: number, repeat: boolean) => typedError<SpokenSegment, ApiError>(__TAURI_INVOKE("speak_dictation_segment", { sessionId, index, repeat })),
+	/**  Commande : interrompt la lecture (pause). */
+	stopSpeech: () => typedError<null, ApiError>(__TAURI_INVOKE("stop_speech")),
+	/**  Commande : change les réglages d'une dictée en cours. */
+	updateDictationSettings: (sessionId: string, settings: DictationSettings_Deserialize) => typedError<DictationSettings_Serialize, ApiError>(__TAURI_INVOKE("update_dictation_settings", { sessionId, settings })),
+	/**  Commande : enregistre le brouillon (NF-06). */
+	saveDictationDraft: (sessionId: string, typed: string, activeMs: number) => typedError<null, ApiError>(__TAURI_INVOKE("save_dictation_draft", { sessionId, typed, activeMs })),
+	/**  Commande : corrige la dictée (F-16). */
+	finishDictation: (sessionId: string, typed: string, activeMs: number) => typedError<DictationSummary_Serialize, ApiError>(__TAURI_INVOKE("finish_dictation", { sessionId, typed, activeMs })),
+	/**  Commande : abandonne la dictée, brouillon gardé. */
+	abandonDictation: (sessionId: string, typed: string, activeMs: number) => typedError<null, ApiError>(__TAURI_INVOKE("abandon_dictation", { sessionId, typed, activeMs })),
+	/**  Commande : dictée à reprendre, s'il y en a une. */
+	pendingDictation: () => typedError<PendingDictation | null, ApiError>(__TAURI_INVOKE("pending_dictation")),
+	/**  Commande : reprend une dictée interrompue. */
+	resumeDictation: (sessionId: string) => typedError<DictationStart_Serialize, ApiError>(__TAURI_INVOKE("resume_dictation", { sessionId })),
 	/**  Commande : ajoute un texte collé à la bibliothèque (F-20). */
 	createText: (input: NewText_Deserialize) => typedError<TextSummary_Serialize, ApiError>(__TAURI_INVOKE("create_text", { input })),
 	/**  Commande : aperçu d'un import PDF (lignes et texte nettoyé). */
@@ -68,6 +98,8 @@ export const commands = {
 	markWordMastered: (word: string) => typedError<null, ApiError>(__TAURI_INVOKE("mark_word_mastered", { word })),
 	/**  Commande : texte d'un exercice de révision (F-44). */
 	reviewExercise: (kind: ReviewExerciseKind, tzOffsetMinutes: number) => typedError<string, ApiError>(__TAURI_INVOKE("review_exercise", { kind, tzOffsetMinutes })),
+	/**  Commande : texte d'un exercice sur des mots donnés (F-44). */
+	wordsExercise: (words: string[], kind: ReviewExerciseKind) => typedError<string, ApiError>(__TAURI_INVOKE("words_exercise", { words, kind })),
 	/**  Commande : tableau de bord sur la période (F-33). */
 	statsDashboard: (period: Period, tzOffsetMinutes: number) => typedError<Dashboard_Serialize, ApiError>(__TAURI_INVOKE("stats_dashboard", { period, tzOffsetMinutes })),
 	/**  Commande : carte de chaleur et bigrammes lents (F-34). */
@@ -98,6 +130,48 @@ export type Activity = {
 	trainingMs: number,
 	/**  Sessions terminées. */
 	sessions: number,
+};
+
+/**  Avancement d'un segment au suivant (F-15). */
+export type Advance = 
+/**  Le segment suivant est lu quand les mots du segment courant sont tapés. */
+"adaptive" | 
+/**  Le segment suivant est lu après la pause, quoi qu'il arrive. */
+"automatic";
+
+/**  Jeton aligné : un mot ou un signe de ponctuation, attendu et/ou tapé. */
+export type AlignedToken = AlignedToken_Serialize | AlignedToken_Deserialize;
+
+/**  Jeton aligné : un mot ou un signe de ponctuation, attendu et/ou tapé. */
+export type AlignedToken_Deserialize = {
+	/**  Texte attendu ; `None` pour un jeton tapé en trop. */
+	expected?: string | null,
+	/**  Texte tapé ; `None` pour un jeton oublié. */
+	typed?: string | null,
+	/**  Mot (sinon ponctuation). */
+	word: boolean,
+	/**  Faute, ou `None` si le jeton est juste. */
+	error?: ErrorType | null,
+	/**  Index du premier graphème attendu, s'il y en a un. */
+	position?: number | null,
+	/**  Une espace précède-t-elle ce jeton dans le texte (pour l'affichage) ? */
+	spaceBefore: boolean,
+};
+
+/**  Jeton aligné : un mot ou un signe de ponctuation, attendu et/ou tapé. */
+export type AlignedToken_Serialize = {
+	/**  Texte attendu ; `None` pour un jeton tapé en trop. */
+	expected: string | null,
+	/**  Texte tapé ; `None` pour un jeton oublié. */
+	typed: string | null,
+	/**  Mot (sinon ponctuation). */
+	word: boolean,
+	/**  Faute, ou `None` si le jeton est juste. */
+	error: ErrorType | null,
+	/**  Index du premier graphème attendu, s'il y en a un. */
+	position: number | null,
+	/**  Une espace précède-t-elle ce jeton dans le texte (pour l'affichage) ? */
+	spaceBefore: boolean,
 };
 
 /**  Forme sérialisée de `AppError`, décrite pour specta. */
@@ -169,12 +243,43 @@ export type CleanOptions_Serialize = {
 	normalizeSpacing: boolean,
 };
 
+/**  Correction complète d'une dictée. */
+export type Correction = Correction_Serialize | Correction_Deserialize;
+
 /**  Comportement face à une erreur (F-04). */
 export type CorrectionMode = 
 /**  Impossible d'avancer tant que l'erreur n'est pas corrigée. */
 "blocking" | 
 /**  On avance ; l'erreur reste comptée. */
 "free";
+
+/**  Correction complète d'une dictée. */
+export type Correction_Deserialize = {
+	/**  Jetons dans l'ordre du texte. */
+	tokens: AlignedToken_Deserialize[],
+	/**  Mots du texte attendu. */
+	expectedWords: number,
+	/**  Mots attendus écrits juste. */
+	correctWords: number,
+	/**  Fautes, ponctuation comprise. */
+	faults: number,
+	/**  Fautes par type, dans un ordre fixe, types sans faute compris. */
+	byType: TypeCount[],
+};
+
+/**  Correction complète d'une dictée. */
+export type Correction_Serialize = {
+	/**  Jetons dans l'ordre du texte. */
+	tokens: AlignedToken_Serialize[],
+	/**  Mots du texte attendu. */
+	expectedWords: number,
+	/**  Mots attendus écrits juste. */
+	correctWords: number,
+	/**  Fautes, ponctuation comprise. */
+	faults: number,
+	/**  Fautes par type, dans un ordre fixe, types sans faute compris. */
+	byType: TypeCount[],
+};
 
 /**  Libellés traduits de l'export CSV (NF-08) : l'interface les fournit. */
 export type CsvLabels = {
@@ -234,6 +339,212 @@ export type Dashboard_Serialize = {
 	trend: Trend_Serialize,
 	/**  Semaine locale en cours (depuis lundi). */
 	week: Activity,
+};
+
+/**  Moyenne des dictées précédentes, pour la comparaison. */
+export type DictationAverage = {
+	/**  Dictées prises en compte. */
+	sessions: number,
+	/**  Précision moyenne, en %. */
+	accuracy: number | null,
+	/**  Fautes moyennes. */
+	faults: number | null,
+	/**  MPM moyen. */
+	wpm: number | null,
+};
+
+/**  Rang de l'exercice dicté, pour « exercice 3 sur 8 ». */
+export type DictationExercise = {
+	/**  Rang, à partir de 0. */
+	index: number,
+	/**  Nombre d'exercices du texte. */
+	count: number,
+};
+
+/**  Profil de dictée enregistré (F-17). */
+export type DictationProfile = DictationProfile_Serialize | DictationProfile_Deserialize;
+
+/**  Profil de dictée enregistré (F-17). */
+export type DictationProfile_Deserialize = {
+	/**  Identifiant. */
+	id: string,
+	/**  Nom. */
+	name: string,
+	/**  Réglages. */
+	settings: DictationSettings_Deserialize,
+};
+
+/**  Profil de dictée enregistré (F-17). */
+export type DictationProfile_Serialize = {
+	/**  Identifiant. */
+	id: string,
+	/**  Nom. */
+	name: string,
+	/**  Réglages. */
+	settings: DictationSettings_Serialize,
+};
+
+/**  Réglages d'une dictée. */
+export type DictationSettings = DictationSettings_Serialize | DictationSettings_Deserialize;
+
+/**  Réglages d'une dictée. */
+export type DictationSettings_Deserialize = {
+	/**  Identifiant de la voix ; `None` = voix française par défaut du système. */
+	voice?: string | null,
+	/**  Vitesse relative, 1 = normale. */
+	rate?: number | null,
+	/**  Hauteur relative, 1 = normale. */
+	pitch?: number | null,
+	/**  Volume, de 0 à 1. */
+	volume?: number | null,
+	/**  Découpage de la lecture. */
+	segmentation?: SegmentMode,
+	/**  Mots par groupe, pour le découpage par groupe. */
+	groupSize?: number,
+	/**  Pause entre deux segments, en ms. */
+	pauseMs?: number,
+	/**  Lire la ponctuation à voix haute (F-13). */
+	readPunctuation?: boolean,
+	/**  Avancement adaptatif ou automatique (F-15). */
+	advance?: Advance,
+	/**  Répétitions autorisées par segment ; `None` = illimité (F-14). */
+	maxRepeats?: number | null,
+	/**  Tolère les variantes typographiques à la correction (’ = ', « » = "). */
+	lenientPunctuation?: boolean,
+};
+
+/**  Réglages d'une dictée. */
+export type DictationSettings_Serialize = {
+	/**  Identifiant de la voix ; `None` = voix française par défaut du système. */
+	voice: string | null,
+	/**  Vitesse relative, 1 = normale. */
+	rate: number | null,
+	/**  Hauteur relative, 1 = normale. */
+	pitch: number | null,
+	/**  Volume, de 0 à 1. */
+	volume: number | null,
+	/**  Découpage de la lecture. */
+	segmentation: SegmentMode,
+	/**  Mots par groupe, pour le découpage par groupe. */
+	groupSize: number,
+	/**  Pause entre deux segments, en ms. */
+	pauseMs: number,
+	/**  Lire la ponctuation à voix haute (F-13). */
+	readPunctuation: boolean,
+	/**  Avancement adaptatif ou automatique (F-15). */
+	advance: Advance,
+	/**  Répétitions autorisées par segment ; `None` = illimité (F-14). */
+	maxRepeats: number | null,
+	/**  Tolère les variantes typographiques à la correction (’ = ', « » = "). */
+	lenientPunctuation: boolean,
+};
+
+/**  Ce qu'il faut à l'interface pour mener une dictée, sans le texte (F-10). */
+export type DictationStart = DictationStart_Serialize | DictationStart_Deserialize;
+
+/**  Ce qu'il faut à l'interface pour mener une dictée, sans le texte (F-10). */
+export type DictationStart_Deserialize = {
+	/**  Identifiant de la session. */
+	sessionId: string,
+	/**  Texte dicté. */
+	textId: string,
+	/**  Titre du texte. */
+	title: string,
+	/**  Exercice dicté. */
+	exercise: DictationExercise,
+	/**  Mots de chaque segment, dans l'ordre de lecture. */
+	segmentWords: number[],
+	/**  Mots du texte dicté. */
+	totalWords: number,
+	/**  Réglages de la dictée. */
+	settings: DictationSettings_Deserialize,
+	/**  Texte déjà tapé (reprise) ; vide pour une nouvelle dictée. */
+	typed: string,
+	/**  Temps actif déjà écoulé, en ms. */
+	activeMs: number,
+	/**  Répétitions déjà faites de chaque segment. */
+	repeats: number[],
+};
+
+/**  Ce qu'il faut à l'interface pour mener une dictée, sans le texte (F-10). */
+export type DictationStart_Serialize = {
+	/**  Identifiant de la session. */
+	sessionId: string,
+	/**  Texte dicté. */
+	textId: string,
+	/**  Titre du texte. */
+	title: string,
+	/**  Exercice dicté. */
+	exercise: DictationExercise,
+	/**  Mots de chaque segment, dans l'ordre de lecture. */
+	segmentWords: number[],
+	/**  Mots du texte dicté. */
+	totalWords: number,
+	/**  Réglages de la dictée. */
+	settings: DictationSettings_Serialize,
+	/**  Texte déjà tapé (reprise) ; vide pour une nouvelle dictée. */
+	typed: string,
+	/**  Temps actif déjà écoulé, en ms. */
+	activeMs: number,
+	/**  Répétitions déjà faites de chaque segment. */
+	repeats: number[],
+};
+
+/**  Chiffres d'une dictée corrigée. */
+export type DictationStats = {
+	/**  Temps actif, en ms. */
+	durationMs: number,
+	/**  Mots tapés par minute. */
+	wpm: number | null,
+	/**  Précision en mots, en %. */
+	accuracy: number | null,
+	/**  Fautes, ponctuation comprise. */
+	faults: number,
+	/**  Répétitions demandées, tous segments confondus. */
+	repeats: number,
+};
+
+/**  Correction d'une dictée (F-16) : le texte est enfin révélé. */
+export type DictationSummary = DictationSummary_Serialize | DictationSummary_Deserialize;
+
+/**  Correction d'une dictée (F-16) : le texte est enfin révélé. */
+export type DictationSummary_Deserialize = {
+	/**  Identifiant de la session. */
+	sessionId: string,
+	/**  Texte dicté. */
+	textId: string,
+	/**  Titre du texte. */
+	title: string,
+	/**  Exercice dicté. */
+	exercise: DictationExercise,
+	/**  Exercice suivant du même texte, s'il y en a un. */
+	nextExercise?: number | null,
+	/**  Alignement et fautes. */
+	correction: Correction_Deserialize,
+	/**  Chiffres. */
+	stats: DictationStats,
+	/**  Moyenne des dictées précédentes ; `None` pour la première. */
+	average?: DictationAverage | null,
+};
+
+/**  Correction d'une dictée (F-16) : le texte est enfin révélé. */
+export type DictationSummary_Serialize = {
+	/**  Identifiant de la session. */
+	sessionId: string,
+	/**  Texte dicté. */
+	textId: string,
+	/**  Titre du texte. */
+	title: string,
+	/**  Exercice dicté. */
+	exercise: DictationExercise,
+	/**  Exercice suivant du même texte, s'il y en a un. */
+	nextExercise: number | null,
+	/**  Alignement et fautes. */
+	correction: Correction_Serialize,
+	/**  Chiffres. */
+	stats: DictationStats,
+	/**  Moyenne des dictées précédentes ; `None` pour la première. */
+	average: DictationAverage | null,
 };
 
 /**  Ligne du tableau « Mots difficiles » (F-41). */
@@ -630,6 +941,24 @@ export type PdfText_Serialize = {
 	content: string,
 };
 
+/**  Dictée interrompue proposée à la reprise (NF-06). */
+export type PendingDictation = {
+	/**  Identifiant de la session. */
+	sessionId: string,
+	/**  Texte dicté. */
+	textId: string,
+	/**  Titre du texte. */
+	title: string,
+	/**  Exercice interrompu. */
+	exercise: DictationExercise,
+	/**  Mots déjà tapés. */
+	typedWords: number,
+	/**  Mots du texte dicté. */
+	totalWords: number,
+	/**  Début, en ms Unix. */
+	startedAt: number,
+};
+
 /**  Session interrompue proposée à la reprise (NF-06). */
 export type PendingSession = PendingSession_Serialize | PendingSession_Deserialize;
 
@@ -829,6 +1158,17 @@ export type ReviewSettings_Serialize = {
 	slowFactor: number | null,
 };
 
+/**  Découpage de la lecture (F-11) ; valeurs de `dictation_profiles.segmentation`. */
+export type SegmentMode = 
+/**  Un mot à la fois. */
+"word" | 
+/**  Des groupes de `group_size` mots. */
+"group" | 
+/**  Une phrase à la fois. */
+"sentence" | 
+/**  Un paragraphe à la fois. */
+"paragraph";
+
 /**  Découpage d'un texte en exercices. */
 export type Segmentation = 
 /**  Un seul exercice : le texte entier. */
@@ -1023,6 +1363,16 @@ export type SourceLine = {
 export type SpeechFinished = {
 	/**  Numéro de la lecture terminée. */
 	utterance: number,
+};
+
+/**  Segment dont la lecture vient de commencer. */
+export type SpokenSegment = {
+	/**  Numéro de lecture, repris par l'événement `SpeechFinished`. */
+	utterance: number,
+	/**  Rang du segment. */
+	index: number,
+	/**  Répétitions faites de ce segment. */
+	repeats: number,
 };
 
 /**  Série de jours consécutifs d'entraînement. */
@@ -1258,6 +1608,14 @@ export type Trend_Serialize = {
 	accuracyDelta: number | null,
 };
 
+/**  Nombre de fautes d'un type. */
+export type TypeCount = {
+	/**  Type de faute. */
+	errorType: ErrorType,
+	/**  Nombre de fautes de ce type. */
+	count: number,
+};
+
 /**  Faute relevée dans une session. */
 export type TypingError = {
 	/**  Mot attendu, ou caractère attendu hors mot. */
@@ -1270,6 +1628,16 @@ export type TypingError = {
 	position: number,
 	/**  `true` pour un mot, `false` pour une espace ou une ponctuation isolée. */
 	word: boolean,
+};
+
+/**  Une voix installée. */
+export type Voice = {
+	/**  Identifiant stable, à enregistrer dans les réglages. */
+	id: string,
+	/**  Nom affiché (« Microsoft Hortense »). */
+	name: string,
+	/**  Langue BCP 47 (« fr-FR »). */
+	language: string,
 };
 
 /**  Un mot tapé pendant une session. */

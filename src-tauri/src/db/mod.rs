@@ -2,6 +2,8 @@
 
 /// Pack de textes intégré (F-25).
 pub mod builtin;
+/// Profils de dictée, brouillon et fin des dictées.
+pub mod dictation;
 /// Profils utilisateurs et leurs réglages.
 pub mod profiles;
 /// Sessions, frappes et fautes.

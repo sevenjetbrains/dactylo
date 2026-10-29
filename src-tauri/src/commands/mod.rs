@@ -6,6 +6,8 @@
 
 /// Informations sur l'application et profil actif.
 pub mod app;
+/// Dictée : voix, réglages, profils, session et correction.
+pub mod dictation;
 /// Bibliothèque de textes.
 pub mod library;
 /// Mode Copie : réglages et sessions.
@@ -34,6 +36,21 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
         .commands(collect_commands![
             app::app_info,
             app::current_profile,
+            dictation::list_voices,
+            dictation::get_dictation_settings,
+            dictation::save_dictation_settings,
+            dictation::list_dictation_profiles,
+            dictation::save_dictation_profile,
+            dictation::delete_dictation_profile,
+            dictation::start_dictation,
+            dictation::speak_dictation_segment,
+            dictation::stop_speech,
+            dictation::update_dictation_settings,
+            dictation::save_dictation_draft,
+            dictation::finish_dictation,
+            dictation::abandon_dictation,
+            dictation::pending_dictation,
+            dictation::resume_dictation,
             library::create_text,
             library::preview_pdf,
             library::import_pdf,
@@ -61,6 +78,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             review::remove_word,
             review::mark_word_mastered,
             review::review_exercise,
+            review::words_exercise,
             stats::stats_dashboard,
             stats::key_report,
             stats::recent_sessions,

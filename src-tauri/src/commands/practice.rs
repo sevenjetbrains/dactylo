@@ -463,7 +463,9 @@ pub async fn abandon(state: &AppState, session_id: &str) -> AppResult<()> {
 
 /// Session interrompue à proposer à la reprise, s'il y en a une (NF-06).
 pub async fn pending(state: &AppState) -> AppResult<Option<PendingSession>> {
-    let Some(row) = sessions::pending(&state.pool, &state.profile_id).await? else {
+    let Some(row) =
+        sessions::pending(&state.pool, &state.profile_id, sessions::Family::Typing).await?
+    else {
         return Ok(None);
     };
     let live = take_live(state, &row.id).await?;

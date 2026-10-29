@@ -3,6 +3,8 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+use dactylo_core::dictation::segment::Segment;
+use dactylo_core::dictation::settings::DictationSettings;
 use dactylo_core::events::EventBus;
 use dactylo_core::settings::PracticeSettings;
 use dactylo_core::speech::SpeechEngine;
@@ -43,6 +45,28 @@ pub struct LiveSession {
     pub typing: TypingSession,
 }
 
+/// Dictée en cours, gardée en mémoire entre deux commandes (ADR 0020). Le texte n'en
+/// sort qu'à la correction ; elle est reconstruite depuis la base si elle manque.
+#[derive(Debug, Clone)]
+pub struct LiveDictation {
+    /// Profil qui fait la dictée.
+    pub profile_id: String,
+    /// Texte dicté.
+    pub text_id: String,
+    /// Titre du texte.
+    pub title: String,
+    /// Exercice dicté (F-24).
+    pub exercise: SessionExercise,
+    /// Réglages de la dictée ; voix, vitesse et pause modifiables en cours de route.
+    pub settings: DictationSettings,
+    /// Texte de l'exercice, attendu à la correction.
+    pub content: String,
+    /// Segments lus l'un après l'autre (F-11).
+    pub segments: Vec<Segment>,
+    /// Répétitions déjà faites de chaque segment (F-14).
+    pub repeats: Vec<u32>,
+}
+
 /// État partagé, injecté dans les commandes via `tauri::State`.
 pub struct AppState {
     /// Connexions à la base SQLite.
@@ -55,6 +79,8 @@ pub struct AppState {
     pub live_sessions: Mutex<HashMap<String, LiveSession>>,
     /// Moteur de synthèse vocale de la dictée (ADR 0019).
     pub speech: Arc<dyn SpeechEngine>,
+    /// Dictées en cours, par identifiant de session.
+    pub live_dictations: Mutex<HashMap<String, LiveDictation>>,
 }
 
 impl AppState {
@@ -65,6 +91,7 @@ impl AppState {
             bus,
             profile_id,
             live_sessions: Mutex::default(),
+            live_dictations: Mutex::default(),
             speech: Arc::new(UnavailableEngine("moteur vocal non démarré".into())),
         }
     }
@@ -81,6 +108,22 @@ impl AppState {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .remove(session_id)
+    }
+
+    /// Retire une dictée du cache.
+    pub fn take_dictation(&self, session_id: &str) -> Option<LiveDictation> {
+        self.live_dictations
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .remove(session_id)
+    }
+
+    /// Remet une dictée dans le cache.
+    pub fn put_dictation(&self, session_id: String, dictation: LiveDictation) {
+        self.live_dictations
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .insert(session_id, dictation);
     }
 
     /// Remet une session dans le cache après traitement.

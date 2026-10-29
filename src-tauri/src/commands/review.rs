@@ -282,6 +282,27 @@ pub async fn exercise(
             .map(|w| w.record.word)
             .collect();
     }
+    generate(state, list, kind).await
+}
+
+/// Texte d'un exercice sur des mots donnés (« S'entraîner sur ces mots » après une
+/// dictée) ; les mots qui n'en sont pas sont ignorés.
+pub async fn exercise_for_words(
+    state: &AppState,
+    words: &[String],
+    kind: ReviewExerciseKind,
+) -> AppResult<String> {
+    let mut list: Vec<String> = words.iter().filter_map(|w| word_key(w).ok()).collect();
+    list.dedup();
+    generate(state, list, kind).await
+}
+
+/// Génère l'exercice de la forme demandée sur au plus `MAX_REVIEW_WORDS` mots.
+async fn generate(
+    state: &AppState,
+    mut list: Vec<String>,
+    kind: ReviewExerciseKind,
+) -> AppResult<String> {
     list.truncate(MAX_REVIEW_WORDS);
     // La graine change à chaque exercice : l'ordre n'est jamais le même.
     let seed = now_ms() as u64;
@@ -360,6 +381,17 @@ pub async fn review_exercise(
     tz_offset_minutes: i32,
 ) -> AppResult<String> {
     exercise(&state, kind, tz_offset_minutes).await
+}
+
+/// Commande : texte d'un exercice sur des mots donnés (F-44).
+#[tauri::command]
+#[specta::specta]
+pub async fn words_exercise(
+    state: State<'_, AppState>,
+    words: Vec<String>,
+    kind: ReviewExerciseKind,
+) -> AppResult<String> {
+    exercise_for_words(&state, &words, kind).await
 }
 
 /// Tests des commandes du module Révision (dans `review/tests.rs`).

@@ -11,6 +11,8 @@ use crate::error::{AppError, AppResult};
 pub const MODE_COPY: &str = "copy";
 /// Session de révision sur un texte généré, sans texte stocké (ADR 0018).
 pub const MODE_REVIEW: &str = "review";
+/// Dictée (ADR 0020).
+pub const MODE_DICTATION: &str = "dictation";
 
 /// Ligne de la table `sessions` utile au mode Copie.
 #[derive(Debug, Clone, sqlx::FromRow)]
@@ -85,18 +87,42 @@ pub async fn get(pool: &SqlitePool, id: &str) -> AppResult<SessionRow> {
     .ok_or_else(|| AppError::NotFound(format!("session {id}")))
 }
 
-/// Dernière session non terminée du profil (NF-06). Une copie dont le texte a été
-/// supprimé n'est pas reprenable ; une révision porte son texte (ADR 0018).
-pub async fn pending(pool: &SqlitePool, profile_id: &str) -> AppResult<Option<SessionRow>> {
-    Ok(sqlx::query_as(
-        "SELECT id, profile_id, text_id, mode, started_at, ended_at, abandoned_at, settings \
-         FROM sessions WHERE profile_id = ? AND ended_at IS NULL AND abandoned_at IS NULL \
-         AND (text_id IS NOT NULL OR mode = 'review') \
-         ORDER BY started_at DESC, id DESC LIMIT 1",
-    )
-    .bind(profile_id)
-    .fetch_optional(pool)
-    .await?)
+/// Famille de sessions reprenables : le mode Copie (copie et révision) ou la dictée.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Family {
+    /// Copie et révision (frappe caractère par caractère).
+    Typing,
+    /// Dictée.
+    Dictation,
+}
+
+/// Dernière session non terminée du profil dans la famille (NF-06). Une copie dont
+/// le texte a été supprimé n'est pas reprenable ; une révision porte son texte
+/// (ADR 0018) ; une dictée a toujours un texte.
+pub async fn pending(
+    pool: &SqlitePool,
+    profile_id: &str,
+    family: Family,
+) -> AppResult<Option<SessionRow>> {
+    // Filtre de mode littéral : sqlx n'accepte que du SQL littéral.
+    let sql = match family {
+        Family::Typing => concat!(
+            "SELECT id, profile_id, text_id, mode, started_at, ended_at, abandoned_at, settings ",
+            "FROM sessions WHERE profile_id = ? AND ended_at IS NULL AND abandoned_at IS NULL ",
+            "AND ((mode = 'copy' AND text_id IS NOT NULL) OR mode = 'review') ",
+            "ORDER BY started_at DESC, id DESC LIMIT 1"
+        ),
+        Family::Dictation => concat!(
+            "SELECT id, profile_id, text_id, mode, started_at, ended_at, abandoned_at, settings ",
+            "FROM sessions WHERE profile_id = ? AND ended_at IS NULL AND abandoned_at IS NULL ",
+            "AND mode = 'dictation' AND text_id IS NOT NULL ",
+            "ORDER BY started_at DESC, id DESC LIMIT 1"
+        ),
+    };
+    Ok(sqlx::query_as(sql)
+        .bind(profile_id)
+        .fetch_optional(pool)
+        .await?)
 }
 
 /// Enregistre un lot de frappes en une transaction ; un `seq` déjà présent est ignoré.
@@ -228,13 +254,15 @@ macro_rules! abandon_sql {
             "DELETE FROM sessions WHERE ",
             $filter,
             " AND ended_at IS NULL AND abandoned_at IS NULL ",
-            "AND NOT EXISTS (SELECT 1 FROM keystrokes k WHERE k.session_id = sessions.id)"
+            "AND NOT EXISTS (SELECT 1 FROM keystrokes k WHERE k.session_id = sessions.id) ",
+            // Une dictée n'a pas de frappes, mais un texte tapé : elle est gardée (ADR 0020).
+            "AND COALESCE(typed_text, '') = ''"
         )
     };
     (keep, $filter:literal) => {
         concat!(
-            "UPDATE sessions SET abandoned_at = ?2, duration_ms = ",
-            "(SELECT MAX(k.t_ms) FROM keystrokes k WHERE k.session_id = sessions.id) ",
+            "UPDATE sessions SET abandoned_at = ?2, duration_ms = COALESCE(",
+            "(SELECT MAX(k.t_ms) FROM keystrokes k WHERE k.session_id = sessions.id), duration_ms) ",
             "WHERE ",
             $filter,
             " AND ended_at IS NULL AND abandoned_at IS NULL"
@@ -391,7 +419,11 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(
-            pending(&pool, &profile).await.unwrap().unwrap().id,
+            pending(&pool, &profile, Family::Typing)
+                .await
+                .unwrap()
+                .unwrap()
+                .id,
             first.id
         );
 
@@ -404,13 +436,22 @@ mod tests {
             Err(AppError::NotFound(_))
         ));
         assert_eq!(
-            pending(&pool, &profile).await.unwrap().unwrap().id,
+            pending(&pool, &profile, Family::Typing)
+                .await
+                .unwrap()
+                .unwrap()
+                .id,
             second.id
         );
 
         // Après abandon, plus rien à reprendre.
         abandon(&pool, &second.id).await.unwrap();
-        assert!(pending(&pool, &profile).await.unwrap().is_none());
+        assert!(
+            pending(&pool, &profile, Family::Typing)
+                .await
+                .unwrap()
+                .is_none()
+        );
     }
 
     /// Une session abandonnée avec des frappes est gardée, datée, avec son temps actif ;
@@ -446,7 +487,11 @@ mod tests {
         assert_eq!(duration, Some(100));
         // Seule la seconde est proposée ; l'abandonnée ne peut plus être close.
         assert_eq!(
-            pending(&pool, &profile).await.unwrap().unwrap().id,
+            pending(&pool, &profile, Family::Typing)
+                .await
+                .unwrap()
+                .unwrap()
+                .id,
             second.id
         );
         assert!(matches!(
@@ -494,7 +539,12 @@ mod tests {
         // La session est close et n'est plus proposée à la reprise.
         let row = get(&pool, &s.id).await.unwrap();
         assert!(row.ended_at.is_some());
-        assert!(pending(&pool, &profile).await.unwrap().is_none());
+        assert!(
+            pending(&pool, &profile, Family::Typing)
+                .await
+                .unwrap()
+                .is_none()
+        );
         // La faute est stockée avec son type en base.
         let stored: (String, String, String) = sqlx::query_as(
             "SELECT expected_word, typed_word, error_type FROM session_errors WHERE session_id = ?",

@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use dactylo_core::events::{DomainEvent, EventBus, EventSubscriber};
 
 use crate::db::{connect_in_memory, profiles};
+use crate::speech::FakeSpeechEngine;
 use crate::state::AppState;
 
 /// Abonné qui garde chaque événement reçu.
@@ -38,4 +39,11 @@ pub async fn state() -> (AppState, Arc<Recorder>) {
     let recorder = Arc::new(Recorder::default());
     bus.subscribe(recorder.clone());
     (AppState::new(pool, bus, profile.id), recorder)
+}
+
+/// État de test avec un moteur vocal factice, rendu pour vérifier les textes lus.
+pub async fn state_with_speech() -> (AppState, Arc<Recorder>, Arc<FakeSpeechEngine>) {
+    let (state, recorder) = state().await;
+    let speech = Arc::new(FakeSpeechEngine::default());
+    (state.with_speech(speech.clone()), recorder, speech)
 }
