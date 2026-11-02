@@ -43,6 +43,11 @@
         "displayLanguageSelector": false
       }
     },
+    "linux": {
+      "deb": {
+        "depends": ["libspeechd2"]
+      }
+    },
     "createUpdaterArtifacts": false
   },
   "plugins": {

@@ -11,7 +11,7 @@ Application desktop hors-ligne d'entraînement à la frappe et à l'orthographe 
 - Rust stable (via [rustup](https://rustup.rs)) ; sous Windows, les MSVC Build Tools (C++)
 - Node.js 22 ou plus et pnpm 10
 - Windows : WebView2 (préinstallé sur Windows 10/11)
-- Linux : `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf`
+- Linux : `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libspeechd-dev libclang-dev` (les deux derniers pour la synthèse vocale, crate `tts`)
 
 ## Commandes
 
