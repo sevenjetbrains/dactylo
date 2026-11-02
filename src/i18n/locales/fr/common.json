@@ -17,5 +17,12 @@
   "update": {
     "banner": "La version {{version}} de Dactylo est disponible.",
     "action": "Voir dans Réglages"
+  },
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Page précédente",
+    "next": "Page suivante",
+    "position": "Page {{page}} sur {{count}}",
+    "goTo": "Aller à la page {{page}}"
   }
 }

@@ -11,13 +11,17 @@ import {
   type ReviewOverview,
 } from '@/shared/api';
 import { dayDiff, relativeDay, tzOffsetMinutes } from '@/shared/lib/dates';
+import { usePagination } from '@/shared/lib/use-pagination';
 import { useDomainEvent } from '@/shared/lib/use-domain-event';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { buttonVariants } from '@/shared/ui/button-variants';
+import { Pagination } from '@/shared/ui/pagination';
 
 /** Réussites de suite pour la maîtrise (F-42), une pastille chacune. */
 const MASTERY_STREAK = 3;
+/** Nombre de mots par page du tableau. */
+const PAGE_SIZE = 15;
 
 /** Message lisible d'une erreur de commande. */
 function messageOf(e: unknown): string {
@@ -38,6 +42,7 @@ export function DifficultWords() {
   const [version, setVersion] = useState(0);
   const reload = useCallback(() => setVersion((v) => v + 1), []);
   useDomainEvent('wordsUpdated', reload);
+  const { page, pageCount, pageItems, setPage } = usePagination(words ?? [], PAGE_SIZE);
 
   useEffect(() => {
     // `active` ignore une réponse arrivée après le démontage ou un rechargement.
@@ -135,101 +140,104 @@ export function DifficultWords() {
       ) : words.length === 0 ? (
         <p className="text-muted-foreground">{t('words.empty')}</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-xs tracking-wider text-muted-foreground uppercase">
-              <tr className="border-b border-border">
-                <th className="py-3 pr-4 font-semibold">{t('words.columns.word')}</th>
-                <th className="py-3 pr-4 font-semibold">{t('words.columns.typed')}</th>
-                <th className="py-3 pr-4 font-semibold">{t('words.columns.error')}</th>
-                <th className="py-3 pr-4 text-right font-semibold">{t('words.columns.ratio')}</th>
-                <th className="py-3 pr-4 font-semibold">{t('words.columns.mastery')}</th>
-                <th className="py-3 pr-4 font-semibold">{t('words.columns.review')}</th>
-                <th className="py-3">
-                  <span className="sr-only">{t('words.columns.actions')}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {words.map((w) => {
-                // Révision due aujourd'hui (ou en retard) : en ambre, comme sur la maquette.
-                const overdue = w.nextReviewAt != null && dayDiff(w.nextReviewAt) <= 0;
-                return (
-                  <tr key={w.word} className="border-b border-border last:border-0">
-                    <td className="py-3 pr-4 font-mono text-base font-semibold">{w.word}</td>
-                    <td className="py-3 pr-4 font-mono text-base text-destructive">
-                      {w.typedForms.join(', ') || '—'}
-                    </td>
-                    <td className="py-3 pr-4">
-                      {w.dominantError ? (
-                        <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
-                          {t(`errorType.${w.dominantError}`)}
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs tracking-wider text-muted-foreground uppercase">
+                <tr className="border-b border-border">
+                  <th className="py-3 pr-4 font-semibold">{t('words.columns.word')}</th>
+                  <th className="py-3 pr-4 font-semibold">{t('words.columns.typed')}</th>
+                  <th className="py-3 pr-4 font-semibold">{t('words.columns.error')}</th>
+                  <th className="py-3 pr-4 text-right font-semibold">{t('words.columns.ratio')}</th>
+                  <th className="py-3 pr-4 font-semibold">{t('words.columns.mastery')}</th>
+                  <th className="py-3 pr-4 font-semibold">{t('words.columns.review')}</th>
+                  <th className="py-3">
+                    <span className="sr-only">{t('words.columns.actions')}</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {pageItems.map((w) => {
+                  // Révision due aujourd'hui (ou en retard) : en ambre, comme sur la maquette.
+                  const overdue = w.nextReviewAt != null && dayDiff(w.nextReviewAt) <= 0;
+                  return (
+                    <tr key={w.word} className="border-b border-border last:border-0">
+                      <td className="py-3 pr-4 font-mono text-base font-semibold">{w.word}</td>
+                      <td className="py-3 pr-4 font-mono text-base text-destructive">
+                        {w.typedForms.join(', ') || '—'}
+                      </td>
+                      <td className="py-3 pr-4">
+                        {w.dominantError ? (
+                          <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
+                            {t(`errorType.${w.dominantError}`)}
+                          </span>
+                        ) : w.encounters > 0 ? (
+                          // Suivi sans faute : il est entré par sa lenteur (F-40).
+                          <span className="text-muted-foreground">{t('words.slow')}</span>
+                        ) : (
+                          // Ajouté à la main, pas encore tapé.
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="py-3 pr-4 text-right font-mono tabular-nums">
+                        {w.errors} / {w.encounters}
+                      </td>
+                      <td className="py-3 pr-4">
+                        {/* Une pastille verte par réussite de suite, sur 3. */}
+                        <span
+                          role="img"
+                          aria-label={t('words.streak', { count: w.streak, total: MASTERY_STREAK })}
+                          className="flex gap-1"
+                        >
+                          {Array.from({ length: MASTERY_STREAK }, (_, i) => (
+                            <span
+                              key={i}
+                              className={cn(
+                                'size-2.5 rounded-full',
+                                i < w.streak ? 'bg-success' : 'bg-border',
+                              )}
+                            />
+                          ))}
                         </span>
-                      ) : w.encounters > 0 ? (
-                        // Suivi sans faute : il est entré par sa lenteur (F-40).
-                        <span className="text-muted-foreground">{t('words.slow')}</span>
-                      ) : (
-                        // Ajouté à la main, pas encore tapé.
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="py-3 pr-4 text-right font-mono tabular-nums">
-                      {w.errors} / {w.encounters}
-                    </td>
-                    <td className="py-3 pr-4">
-                      {/* Une pastille verte par réussite de suite, sur 3. */}
-                      <span
-                        role="img"
-                        aria-label={t('words.streak', { count: w.streak, total: MASTERY_STREAK })}
-                        className="flex gap-1"
+                      </td>
+                      <td
+                        className={cn(
+                          'py-3 pr-4',
+                          overdue && 'font-semibold text-amber-800 dark:text-accent',
+                        )}
                       >
-                        {Array.from({ length: MASTERY_STREAK }, (_, i) => (
-                          <span
-                            key={i}
-                            className={cn(
-                              'size-2.5 rounded-full',
-                              i < w.streak ? 'bg-success' : 'bg-border',
-                            )}
-                          />
-                        ))}
-                      </span>
-                    </td>
-                    <td
-                      className={cn(
-                        'py-3 pr-4',
-                        overdue && 'font-semibold text-amber-800 dark:text-accent',
-                      )}
-                    >
-                      {w.nextReviewAt == null
-                        ? '—'
-                        : overdue
-                          ? t('words.today')
-                          : relativeDay(w.nextReviewAt, lang)}
-                    </td>
-                    <td className="py-3 text-right whitespace-nowrap">
-                      <button
-                        type="button"
-                        className="font-semibold text-primary hover:underline"
-                        onClick={() => act(unwrap(commands.markWordMastered(w.word)))}
-                        aria-label={t('words.markMasteredWord', { word: w.word })}
-                      >
-                        {t('words.markMastered')}
-                      </button>
-                      <button
-                        type="button"
-                        className="ml-4 text-muted-foreground hover:underline"
-                        onClick={() => act(unwrap(commands.removeWord(w.word)))}
-                        aria-label={t('words.removeWord', { word: w.word })}
-                      >
-                        {t('words.remove')}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                        {w.nextReviewAt == null
+                          ? '—'
+                          : overdue
+                            ? t('words.today')
+                            : relativeDay(w.nextReviewAt, lang)}
+                      </td>
+                      <td className="py-3 text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          className="font-semibold text-primary hover:underline"
+                          onClick={() => act(unwrap(commands.markWordMastered(w.word)))}
+                          aria-label={t('words.markMasteredWord', { word: w.word })}
+                        >
+                          {t('words.markMastered')}
+                        </button>
+                        <button
+                          type="button"
+                          className="ml-4 text-muted-foreground hover:underline"
+                          onClick={() => act(unwrap(commands.removeWord(w.word)))}
+                          aria-label={t('words.removeWord', { word: w.word })}
+                        >
+                          {t('words.remove')}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <Pagination page={page} pageCount={pageCount} onPage={setPage} />
+        </>
       )}
     </div>
   );

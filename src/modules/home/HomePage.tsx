@@ -26,8 +26,8 @@ import { RecentSessions } from './RecentSessions';
 import { ReviewCard } from './ReviewCard';
 import { StatTiles } from './StatTiles';
 
-/** Sessions récentes affichées (maquette : 3). */
-const RECENT_COUNT = 3;
+/** Sessions récentes chargées, parcourues ensuite par pages dans le tableau. */
+const RECENT_COUNT = 50;
 
 /** Date du jour en toutes lettres (« Mardi 27 octobre »), avec une majuscule initiale. */
 function today(language: string): string {

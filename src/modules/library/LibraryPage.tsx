@@ -6,10 +6,12 @@ import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router';
 
 import { commands, unwrap, type TextSort, type TextSummary } from '@/shared/api';
+import { usePagination } from '@/shared/lib/use-pagination';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { buttonVariants } from '@/shared/ui/button-variants';
 import { Eyebrow } from '@/shared/ui/card';
+import { Pagination } from '@/shared/ui/pagination';
 import { ProgressBar } from '@/shared/ui/progress-bar';
 
 import { fieldClass, inputClass, messageOf } from './form-utils';
@@ -19,6 +21,8 @@ import { TextEditor } from './TextEditor';
 
 /** Ordres de tri proposés. */
 const SORTS: TextSort[] = ['newest', 'oldest', 'shortest', 'longest', 'bestScore'];
+/** Nombre de textes par page de la liste. */
+const PAGE_SIZE = 10;
 
 /**
  * Bibliothèque (F-20 à F-25). La vue se choisit par l'URL : liste par défaut,
@@ -80,7 +84,7 @@ export default function LibraryPage() {
   );
 }
 
-/** Liste des textes avec recherche, filtre par étiquette et tri (F-23). */
+/** Liste des textes avec recherche, filtre par étiquette, tri (F-23) et pagination. */
 function TextList({
   notice,
   onNotice,
@@ -98,6 +102,7 @@ function TextList({
   const [error, setError] = useState<string | null>(null);
   // Incrémenté après une duplication ou une suppression pour recharger la liste.
   const [revision, setRevision] = useState(0);
+  const { page, pageCount, pageItems, setPage } = usePagination(texts ?? [], PAGE_SIZE);
 
   // Liste recalculée par le backend à chaque changement de critère.
   useEffect(() => {
@@ -152,7 +157,11 @@ function TextList({
             className={inputClass}
             placeholder={t('filters.searchPlaceholder')}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              // Nouveaux critères : on repart de la première page.
+              setSearch(e.target.value);
+              setPage(1);
+            }}
           />
         </label>
         <label className={fieldClass}>
@@ -160,7 +169,10 @@ function TextList({
           <select
             className={`${inputClass} h-10`}
             value={tag}
-            onChange={(e) => setTag(e.target.value)}
+            onChange={(e) => {
+              setTag(e.target.value);
+              setPage(1);
+            }}
           >
             <option value="">{t('filters.allTags')}</option>
             {tags.map((value) => (
@@ -175,7 +187,10 @@ function TextList({
           <select
             className={`${inputClass} h-10`}
             value={sort}
-            onChange={(e) => setSort(e.target.value as TextSort)}
+            onChange={(e) => {
+              setSort(e.target.value as TextSort);
+              setPage(1);
+            }}
           >
             {SORTS.map((value) => (
               <option key={value} value={value}>
@@ -200,26 +215,29 @@ function TextList({
           {search || tag ? t('list.noMatch') : t('list.empty')}
         </p>
       ) : (
-        <ul className="flex flex-col gap-3">
-          {texts.map((text) => (
-            <TextItem
-              key={text.id}
-              text={text}
-              onDuplicate={() =>
-                void act(
-                  unwrap(commands.duplicateText(text.id)),
-                  t('list.duplicated', { title: text.title }),
-                )
-              }
-              onDelete={() =>
-                void act(
-                  unwrap(commands.deleteText(text.id)),
-                  t('list.deleted', { title: text.title }),
-                )
-              }
-            />
-          ))}
-        </ul>
+        <>
+          <ul className="flex flex-col gap-3">
+            {pageItems.map((text) => (
+              <TextItem
+                key={text.id}
+                text={text}
+                onDuplicate={() =>
+                  void act(
+                    unwrap(commands.duplicateText(text.id)),
+                    t('list.duplicated', { title: text.title }),
+                  )
+                }
+                onDelete={() =>
+                  void act(
+                    unwrap(commands.deleteText(text.id)),
+                    t('list.deleted', { title: text.title }),
+                  )
+                }
+              />
+            ))}
+          </ul>
+          <Pagination page={page} pageCount={pageCount} onPage={setPage} />
+        </>
       )}
     </section>
   );
