@@ -50,6 +50,8 @@ interface PracticeState {
   checkGoal: (now: number) => void;
   /** Indique que le résumé est arrivé. */
   markDone: () => void;
+  /** Affiche ou masque le clavier virtuel de la session en cours. */
+  setShowKeyboard: (show: boolean) => void;
   /** Vide la file et renvoie son contenu, pour un envoi. */
   takeBatch: () => Keystroke[];
   /** Remet en tête de file un lot dont l'envoi a échoué. */
@@ -155,6 +157,14 @@ export const usePracticeStore = create<PracticeState>()((set, get) => ({
   },
 
   markDone: () => set({ status: 'done' }),
+
+  setShowKeyboard: (show) => {
+    const { session } = get();
+    // Sans session, il n'y a pas de clavier à afficher.
+    if (!session) return;
+    // Nouvel objet : les abonnés à `session` sont rendus de nouveau.
+    set({ session: { ...session, settings: { ...session.settings, showKeyboard: show } } });
+  },
 
   takeBatch: () => {
     const { queue } = get();

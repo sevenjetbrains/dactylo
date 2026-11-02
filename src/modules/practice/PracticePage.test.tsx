@@ -21,6 +21,8 @@ const api = {
   nextTextId: vi.fn(),
   getPracticeSettings: vi.fn(),
   savePracticeSettings: vi.fn(),
+  keyboardLayout: vi.fn(),
+  keyboardKeys: vi.fn(),
 };
 
 // Toute commande appelée est redirigée vers l'espion du même nom.
@@ -132,6 +134,32 @@ describe('PracticePage', () => {
     api.nextTextId.mockReturnValue(ok('t2'));
     api.getPracticeSettings.mockReturnValue(ok(settings));
     api.savePracticeSettings.mockImplementation((s: unknown) => ok(s));
+    // Clavier virtuel réduit à la touche « e », seule touche connue.
+    api.keyboardLayout.mockReturnValue(
+      ok({
+        id: 'azerty',
+        rows: [
+          [
+            {
+              code: 'KeyE',
+              base: 'e',
+              shift: 'E',
+              altgr: null,
+              dead: false,
+              finger: 'leftMiddle',
+              width: 1,
+            },
+          ],
+        ],
+      }),
+    );
+    api.keyboardKeys.mockImplementation((g: string[]) =>
+      ok(
+        g.map((x) =>
+          x === 'e' ? [{ code: 'KeyE', shift: false, altgr: false, caps: false }] : [],
+        ),
+      ),
+    );
   });
 
   it('joue une session complète puis affiche le résumé (F-32)', async () => {
@@ -236,6 +264,27 @@ describe('PracticePage', () => {
         correction: 'blocking',
       }),
     );
+  });
+
+  it('affiche puis masque le clavier virtuel sans relancer le texte (F-08)', async () => {
+    renderPage();
+    const input = await screen.findByLabelText('Zone de frappe');
+    // Une frappe d'abord : elle doit survivre au changement d'affichage.
+    type(input, 'l');
+    expect(screen.queryByText(/Touche suivante/)).toBeNull();
+
+    // Le bouton affiche le clavier et enregistre le réglage.
+    await userEvent.click(screen.getByRole('button', { name: 'Afficher le clavier virtuel' }));
+    expect(await screen.findByText(/Touche suivante/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(api.savePracticeSettings).toHaveBeenCalledWith({ ...settings, showKeyboard: true }),
+    );
+
+    // Puis le masque ; la session n'a jamais été relancée.
+    await userEvent.click(screen.getByRole('button', { name: 'Masquer le clavier virtuel' }));
+    expect(screen.queryByText(/Touche suivante/)).toBeNull();
+    expect(api.startSession).toHaveBeenCalledTimes(1);
+    expect(usePracticeStore.getState().engine?.position).toBe(1);
   });
 
   it('propose de reprendre une session interrompue et rejoue ses frappes (NF-06)', async () => {

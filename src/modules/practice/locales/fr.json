@@ -107,7 +107,9 @@
     "correction": "Correction",
     "pause": "Mettre en pause",
     "resume": "Reprendre la frappe",
-    "restart": "Recommencer le texte"
+    "restart": "Recommencer le texte",
+    "showKeyboard": "Afficher le clavier virtuel",
+    "hideKeyboard": "Masquer le clavier virtuel"
   },
   "corrections": {
     "free": "Libre",

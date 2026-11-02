@@ -316,6 +316,21 @@ export default function PracticePage() {
     [restart],
   );
 
+  /**
+   * Affiche ou masque le clavier virtuel (F-08) : effet immédiat sur la session,
+   * puis enregistrement dans les réglages du profil, sans relancer le texte.
+   */
+  const toggleKeyboard = useCallback(async () => {
+    const show = !usePracticeStore.getState().session?.settings.showKeyboard;
+    usePracticeStore.getState().setShowKeyboard(show);
+    try {
+      const current = await unwrap(commands.getPracticeSettings());
+      await unwrap(commands.savePracticeSettings({ ...current, showKeyboard: show }));
+    } catch (e) {
+      setPhase({ kind: 'error', message: messageOf(e) });
+    }
+  }, []);
+
   // Raccourcis (F-07) : Échap = pause, Ctrl+R = recommencer, Ctrl+Entrée = texte suivant.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -431,6 +446,7 @@ export default function PracticePage() {
             disabled={status === 'finishing'}
             onGoal={(goal) => void changeSettings({ goal })}
             onCorrection={(correction) => void changeSettings({ correction })}
+            onToggleKeyboard={() => void toggleKeyboard()}
             onTogglePause={togglePause}
             onRestart={() => void restart()}
           />

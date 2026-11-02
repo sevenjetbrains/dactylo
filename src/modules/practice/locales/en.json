@@ -107,7 +107,9 @@
     "correction": "Correction",
     "pause": "Pause",
     "resume": "Resume typing",
-    "restart": "Restart the text"
+    "restart": "Restart the text",
+    "showKeyboard": "Show the on-screen keyboard",
+    "hideKeyboard": "Hide the on-screen keyboard"
   },
   "corrections": {
     "free": "Free",

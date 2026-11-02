@@ -1,6 +1,6 @@
-/** Barre d'outils de la session : type de session, correction, pause et recommencer. */
+/** Barre d'outils de la session : type de session, correction, clavier, pause et recommencer. */
 
-import { Pause, Play, RotateCcw } from 'lucide-react';
+import { Keyboard, Pause, Play, RotateCcw } from 'lucide-react';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -16,7 +16,7 @@ const DEFAULT_WORDS = 100;
 /** Propriétés de la barre d'outils. */
 interface Props {
   /** Réglages de la session en cours. */
-  settings: Pick<PracticeSettings, 'goal' | 'correction'>;
+  settings: Pick<PracticeSettings, 'goal' | 'correction' | 'showKeyboard'>;
   /** La session est-elle en pause ? */
   paused: boolean;
   /** Tout désactiver (fin de session en cours d'envoi). */
@@ -25,6 +25,8 @@ interface Props {
   onGoal: (goal: SessionGoal) => void;
   /** Change le mode de correction. */
   onCorrection: (mode: PracticeSettings['correction']) => void;
+  /** Affiche ou masque le clavier virtuel, sans relancer le texte. */
+  onToggleKeyboard: () => void;
   /** Met en pause ou reprend. */
   onTogglePause: () => void;
   /** Recommence le texte. */
@@ -38,7 +40,8 @@ function sameGoal(a: SessionGoal, b: SessionGoal): boolean {
 
 /**
  * Onglets du type de session, choix de la correction et boutons pause / recommencer,
- * comme sur la maquette de la page Copie. Changer un réglage relance le texte.
+ * comme sur la maquette de la page Copie. Changer un réglage relance le texte,
+ * sauf le clavier virtuel, qui n'est qu'un affichage.
  */
 export function SessionToolbar({
   settings,
@@ -46,6 +49,7 @@ export function SessionToolbar({
   disabled,
   onGoal,
   onCorrection,
+  onToggleKeyboard,
   onTogglePause,
   onRestart,
 }: Props) {
@@ -108,6 +112,18 @@ export function SessionToolbar({
           </option>
         ))}
       </select>
+      {/* Clavier virtuel (F-08) : bouton enfoncé quand il est affiché. */}
+      <Button
+        variant="outline"
+        size="icon"
+        aria-pressed={settings.showKeyboard}
+        onClick={onToggleKeyboard}
+        aria-label={settings.showKeyboard ? t('toolbar.hideKeyboard') : t('toolbar.showKeyboard')}
+        title={settings.showKeyboard ? t('toolbar.hideKeyboard') : t('toolbar.showKeyboard')}
+        className={cn(settings.showKeyboard && 'bg-muted text-primary')}
+      >
+        <Keyboard aria-hidden className="size-4" />
+      </Button>
       {/* Pause / reprise (Échap) et recommencer (Ctrl+R). */}
       <Button
         variant="outline"
